@@ -1,0 +1,11 @@
+# vl/snippets
+
+This repo contains some extracted code snippets that I use when coding. The examples folder contains implementation examples with their build scripts.
+
+## Requirements
+
+* Clang
+* C++14 or later
+* SDL2
+
+All examples were written and built on Ubuntu 24.04.2 LTS, compabitility is not guaranteed on other platforms.
