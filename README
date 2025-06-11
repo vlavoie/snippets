@@ -6,6 +6,6 @@ This repo contains some extracted code snippets that I use when coding. The exam
 
 * Clang
 * C++14 or later
-* SDL2
+* X11
 
 All examples were written and built on Ubuntu 24.04.2 LTS, compabitility is not guaranteed on other platforms.
