@@ -18,14 +18,25 @@
       "environment": [],
       "externalConsole": false,
       "MIMode": "gdb",
-      "setupCommands": [
-        {
-          "description": "Enable pretty-printing for gdb",
-          "text": "-enable-pretty-printing",
-          "ignoreFailures": true
-        }
-      ],
+      "setupCommands": [],
       "preLaunchTask": "CompileImage"
+    },
+    {
+      "name": "DebugModel",
+      "type": "cppdbg",
+      "request": "launch",
+      // Resolved by CMake Tools:
+      "program": "${workspaceFolder}/build/model_d",
+      "args": [
+        "assets/test.obj"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [],
+      "preLaunchTask": "CompileModel"
     }
   ]
 }

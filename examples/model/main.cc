@@ -1,0 +1,320 @@
+#include <common.hh>
+#include <model/wavefront.hh>
+
+// OpenGL
+#define GL_GLEXT_PROTOTYPES
+#include <GL/gl.h>
+#include <GL/glext.h>
+#include <GL/glx.h>
+// x11
+#include <X11/X.h>
+#include <X11/Xlib.h>
+// glibc
+#include <stdio.h>
+#include <stdlib.h>
+
+// gl variables
+const GLchar *VERTEX_SHADER = R"(
+#version 330 core
+
+layout (location = 0) in vec4 VertexCoordinate;
+layout (location = 1) in vec3 TextureCoordinate;
+layout (location = 2) in vec3 VertexNormal;
+
+out vec2 FragmentCoordinate;
+
+void main(void)
+{
+  FragmentCoordinate = TextureCoordinate.xy;
+  gl_Position = VertexCoordinate;
+}
+)";
+
+const GLchar *FRAGMENT_SHADER = R"(
+#version 330 core
+in vec2 FragmentCoordinate;
+
+uniform sampler2D Texture0;
+
+void main() {
+  gl_FragColor = texture(Texture0, FragmentCoordinate);
+}
+)";
+
+static GLuint ShaderId, TextureId, VBO, VAO;
+
+// x11 variables
+struct x_state
+{
+  i32 Screen;
+  i32 Width;
+  i32 Height;
+  Window Root;
+  Window Window;
+  GLXContext GLContext;
+  Display *Display;
+  XVisualInfo *VisualInfo;
+};
+
+static x_state WindowState;
+
+void GLAPIENTRY OpenGLMessageCallback(GLenum source, GLenum Type, GLuint Id, GLenum Severity,
+                                      GLsizei Length, const GLchar *Message, const void *UserParam)
+{
+  fprintf(stderr, "GL CALLBACK: %s Type = 0x%x, Severity = 0x%x, Message = %s\n",
+          (Type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), Type, Severity, Message);
+}
+
+GLuint CompileShader(const GLchar *const *ShaderSource, GLenum Type)
+{
+  GLuint ShaderId = glCreateShader(Type);
+  glShaderSource(ShaderId, 1, ShaderSource, NULL);
+  glCompileShader(ShaderId);
+
+  i32 CompileStatue;
+  glGetShaderiv(ShaderId, GL_COMPILE_STATUS, &CompileStatue);
+  if (CompileStatue)
+  {
+    fprintf(stdout, "%s Shader compiled.\n", Type == GL_FRAGMENT_SHADER ? "Fragment" : "Vertex");
+  }
+  else
+  {
+    char Buffer[4096];
+    glGetShaderInfoLog(ShaderId, 4096, NULL, Buffer);
+    fprintf(stderr, "%s Shader failed to compile: %s\n",
+            Type == GL_FRAGMENT_SHADER ? "Fragment" : "Vertex", Buffer);
+  }
+
+  return ShaderId;
+}
+
+GLuint CreateShaderProgram(const GLchar *const *VertexSource, const GLchar *const *FragmentSource)
+{
+  GLuint ShaderId = glCreateProgram();
+
+  GLuint VertexShader = CompileShader(VertexSource, GL_VERTEX_SHADER);
+  GLuint FragmentShader = CompileShader(FragmentSource, GL_FRAGMENT_SHADER);
+
+  glAttachShader(ShaderId, VertexShader);
+  glAttachShader(ShaderId, FragmentShader);
+  glLinkProgram(ShaderId);
+
+  GLint LinkingStatus;
+  glGetProgramiv(ShaderId, GL_LINK_STATUS, &LinkingStatus);
+  if (LinkingStatus)
+  {
+    fprintf(stdout, "Shader program linked.\n");
+  }
+  else
+  {
+    char Buffer[4096];
+    glGetProgramInfoLog(ShaderId, 4096, NULL, Buffer);
+    fprintf(stdout, "Shader program failed linking: %s\n", Buffer);
+  }
+
+  glDeleteShader(VertexShader);
+  glDeleteShader(FragmentShader);
+  return ShaderId;
+}
+
+i32 HandleX11Error(Display *XDisplay, XErrorEvent *XError)
+{
+  char Message[256];
+  if (XGetErrorText(XDisplay, XError->error_code, Message, sizeof(Message)))
+  {
+    fprintf(stderr, "Failed to parse error message %d", XError->error_code);
+    return 1;
+  }
+  fprintf(stderr, "X11 error code %d: %s", XError->error_code, Message);
+
+  return 0;
+}
+
+i32 main(i32 Argc, char *Argv[])
+{
+  if (Argc < 2)
+  {
+    fprintf(stderr, "OBJ file argument is required to render model.");
+    return 1;
+  }
+
+  FILE *File = fopen(Argv[1], "r");
+  key OBJLength = 0;
+  void *OBJData = 0x0;
+
+  if (File)
+  {
+    fseek(File, 0, SEEK_END);
+    OBJLength = ftell(File);
+    OBJData = malloc(sizeof(byte) * OBJLength);
+    rewind(File);
+    fread(OBJData, 1, OBJLength, File);
+
+    fclose(File);
+  }
+
+  obj::mesh *Mesh = obj::Parse(OBJLength, OBJData);
+
+  if (Mesh == 0x0)
+  {
+    fprintf(stderr, "Failed to parse OBJ file.");
+    return 1;
+  }
+
+  // x11 state initialization
+  fprintf(stdout, "Initializing x11 platform.\n");
+  GLint GLAttributes[] = {GLX_RGBA, GLX_DEPTH_SIZE, 24, GLX_DOUBLEBUFFER, None};
+  Colormap XColorMap;
+
+  XSetWindowAttributes SetWindowAttributes;
+
+  XSetErrorHandler(&HandleX11Error);
+  WindowState.Display = XOpenDisplay(NULL);
+
+  if (!WindowState.Display)
+  {
+    fprintf(stderr, "Failed to connect to x11 server.\n");
+    return 1;
+  }
+
+  WindowState.Screen = DefaultScreen(WindowState.Display);
+  WindowState.Root = DefaultRootWindow(WindowState.Display);
+  WindowState.VisualInfo = glXChooseVisual(WindowState.Display, 0, GLAttributes);
+
+  if (!WindowState.VisualInfo)
+  {
+    fprintf(stderr, "No appropriate display found\n");
+    return 1;
+  }
+  else
+  {
+    fprintf(stdout, "Display %p selected\n", (void *)WindowState.VisualInfo->visualid);
+  }
+
+  XColorMap = XCreateColormap(WindowState.Display, WindowState.Root, WindowState.VisualInfo->visual,
+                              AllocNone);
+  SetWindowAttributes.colormap = XColorMap;
+  SetWindowAttributes.event_mask = ExposureMask;
+
+  WindowState.Window = XCreateWindow(
+      WindowState.Display, WindowState.Root, 0, 0, 1024, 768, 0, WindowState.VisualInfo->depth,
+      InputOutput, WindowState.VisualInfo->visual, CWColormap | CWEventMask, &SetWindowAttributes);
+
+  XMapWindow(WindowState.Display, WindowState.Window);
+  XStoreName(WindowState.Display, WindowState.Window, "Model Example");
+
+  WindowState.GLContext =
+      glXCreateContext(WindowState.Display, WindowState.VisualInfo, NULL, GL_TRUE);
+  glXMakeCurrent(WindowState.Display, WindowState.Window, WindowState.GLContext);
+
+  XWindowAttributes WindowAttributes;
+  XGetWindowAttributes(WindowState.Display, WindowState.Window, &WindowAttributes);
+  WindowState.Width = WindowAttributes.width;
+  WindowState.Height = WindowAttributes.height;
+
+  ShaderId = CreateShaderProgram(&VERTEX_SHADER, &FRAGMENT_SHADER);
+  glUseProgram(ShaderId);
+
+  glEnable(GL_DEBUG_OUTPUT);
+  glDebugMessageCallback(OpenGLMessageCallback, 0);
+
+  glViewport(0, 0, 1024, 768);
+  glClearColor(0, 0, 0.1f, 1.0f);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glEnable(GL_BLEND);
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glDisable(GL_DEPTH_TEST);
+
+  glGenVertexArrays(1, &VAO);
+  glBindVertexArray(VAO);
+
+  glGenBuffers(1, &VBO);
+  glBindBuffer(GL_ARRAY_BUFFER, VBO);
+
+  glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, sizeof(obj::vertex), (void *)0);
+  glEnableVertexAttribArray(0);
+  glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, sizeof(obj::texture_coord),
+                        (void *)sizeof(obj::vertex));
+  glEnableVertexAttribArray(1);
+  glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(obj::vertex_normal),
+                        (void *)sizeof(obj::vertex_normal));
+  glEnableVertexAttribArray(2);
+
+  // glGenTextures(1, &TextureId);
+  // glActiveTexture(GL_TEXTURE0);
+  // glBindTexture(GL_TEXTURE_2D, TextureId);
+  // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  // glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+  key *Indices = (key *)malloc(sizeof(key) * Mesh->TriangleCount);
+  for (key Index = 0; Index < Mesh->TriangleCount; Index++)
+  {
+    Indices[Index] = Mesh->Triangles[Index].Faces[0].VertexIndex;
+  }
+
+  glBufferData(GL_ARRAY_BUFFER, sizeof(obj::vertex) * Mesh->VertexCount, Mesh->Vertices,
+               GL_STATIC_DRAW);
+
+  glDrawElements(GL_TRIANGLES, Mesh->TriangleCount, GL_UNSIGNED_INT, Indices);
+  glXSwapBuffers(WindowState.Display, WindowState.Window);
+
+  Atom WindowDeleteMessage = XInternAtom(WindowState.Display, "WM_DELETE_WINDOW", False);
+  XSetWMProtocols(WindowState.Display, WindowState.Window, &WindowDeleteMessage, 1);
+  XEvent WindowEvent;
+
+  while (true)
+  {
+    XNextEvent(WindowState.Display, &WindowEvent);
+
+    if (WindowEvent.type == ClientMessage && WindowEvent.xclient.data.l[0] == WindowDeleteMessage)
+    {
+      break;
+    }
+  }
+
+  fprintf(stdout, "Closing x11 state.\n");
+  if (glXMakeCurrent(WindowState.Display, None, NULL))
+  {
+    fprintf(stdout, "Shutdown GLX context.\n");
+  }
+  else
+  {
+    fprintf(stderr, "Failed to shutdown GLX context\n");
+    return 1;
+  }
+
+  glXDestroyContext(WindowState.Display, WindowState.GLContext);
+
+  if (XDestroyWindow(WindowState.Display, WindowState.Window))
+  {
+    fprintf(stdout, "Destroying x11 window.\n");
+  }
+  else
+  {
+    fprintf(stderr, "Failed to destroy x11 window.\n");
+    return 1;
+  }
+
+  if (XDestroyWindow(WindowState.Display, WindowState.Root))
+  {
+    fprintf(stdout, "Destroying x11 root window.\n");
+  }
+  else
+  {
+    fprintf(stderr, "Failed to destroy x11 root window.\n");
+    return 1;
+  }
+
+  fprintf(stdout, "Closing x11 display.\n");
+  XCloseDisplay(WindowState.Display);
+
+  glDeleteBuffers(1, &VBO);
+  glDeleteVertexArrays(1, &VAO);
+  glDeleteTextures(1, &TextureId);
+  glDeleteProgram(ShaderId);
+
+  free(Indices);
+  free(OBJData);
+
+  return 0;
+}

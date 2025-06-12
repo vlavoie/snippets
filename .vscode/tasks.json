@@ -8,6 +8,12 @@
       "type": "shell",
       "command": "${workspaceFolder}/examples/image/compile.sh",
       "group": "build"
+    },
+    {
+      "label": "CompileModel",
+      "type": "shell",
+      "command": "${workspaceFolder}/examples/model/compile.sh",
+      "group": "build"
     }
   ]
 }
