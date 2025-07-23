@@ -1,3 +1,21 @@
+/*
+Common header for types and other re-used inline functions and macros.
+Copyright (C) 2025  Vincent Lavoie
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #pragma once
 
 // libc
@@ -53,3 +71,9 @@ typedef u64 tick;
 #define FourCC(A, B, C, D) ((u32(D) << 24) | (u32(C) << 16) | (u32(B) << 8) | (u32(A)))
 
 #define ArrayLength(_Array) (sizeof(_Array) / sizeof(*_Array))
+
+struct buffer
+{
+  key Length;
+  void *Data;
+};

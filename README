@@ -6,6 +6,7 @@ This repo contains some extracted code snippets that I use when coding. The exam
 
 * Clang
 * C++14 or later
-* X11
+* X11 (For image example)
+* Pulse Audio (For audio example)
 
 All examples were written and built on Ubuntu 24.04.2 LTS, compabitility is not guaranteed on other platforms.
