@@ -1,5 +1,5 @@
 #include <common.hh>
-#include <image/tga.hh>
+#include <tga.hh>
 
 // OpenGL
 #define GL_GLEXT_PROTOTYPES
