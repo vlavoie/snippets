@@ -18,14 +18,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "riff.hh"
 
-riff::chunk *riff::GetChunk(buffer Buffer)
+riff::chunk *riff::GetChunk(key Length, void *Data)
 {
-  if (Buffer.Length < sizeof(riff::chunk))
+  if (Length < sizeof(riff::chunk))
   {
     return 0x0;
   }
 
-  riff::chunk *Result = (riff::chunk *)Buffer.Data;
+  riff::chunk *Result = (riff::chunk *)Data;
 
   if (riff::IsRiffChunk(Result))
   {

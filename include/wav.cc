@@ -18,9 +18,9 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "wav.hh"
 
-riff::chunk *wav::GetChunk(buffer Buffer)
+riff::chunk *wav::GetChunk(key Length, void *Data)
 {
-  riff::chunk *RiffChunk = riff::GetChunk(Buffer);
+  riff::chunk *RiffChunk = riff::GetChunk(Length, Data);
 
   if (!RiffChunk)
   {
@@ -35,9 +35,9 @@ riff::chunk *wav::GetChunk(buffer Buffer)
   return RiffChunk;
 }
 
-wav::format *wav::GetFormat(buffer Buffer)
+wav::format *wav::GetFormat(key Length, void *Data)
 {
-  riff::chunk *Chunk = wav::GetChunk(Buffer);
+  riff::chunk *Chunk = wav::GetChunk(Length, Data);
 
   if (!Chunk)
   {
@@ -54,9 +54,9 @@ wav::format *wav::GetFormat(buffer Buffer)
   return (wav::format *)riff::GetChunkData(Iterator);
 }
 
-wav::audio wav::GetAudio(buffer Buffer)
+wav::audio wav::GetAudio(key Length, void *Data)
 {
-  riff::chunk *Chunk = wav::GetChunk(Buffer);
+  riff::chunk *Chunk = wav::GetChunk(Length, Data);
 
   if (!Chunk)
   {
@@ -79,12 +79,12 @@ wav::audio wav::GetAudio(buffer Buffer)
     return wav::ZeroAudio();
   }
 
-  wav::data *Data = (wav::data *)riff::GetChunkData(Iterator);
+  wav::data *WavData = (wav::data *)riff::GetChunkData(Iterator);
   u32 Size = riff::GetChunkSize(Iterator);
 
   return {
       .SampleCount = Size / (Format->BitsPerSample / 8),
       .ChannelCount = Format->Channels,
-      .SampleData = Data,
+      .SampleData = WavData,
   };
 }

@@ -46,7 +46,7 @@ enum
   FORMAT_TYPE = FourCC('R', 'I', 'F', 'F'),
 };
 
-inline riff::iterator ZeroIterator()
+constexpr inline riff::iterator ZeroIterator()
 {
   return {
       .Current = 0x0,
@@ -54,17 +54,17 @@ inline riff::iterator ZeroIterator()
   };
 }
 
-inline bool32 IsRiffChunk(riff::chunk *Chunk)
+constexpr inline bool32 IsRiffChunk(riff::chunk *Chunk)
 {
   return Chunk->ChunkID == riff::FORMAT_TYPE;
 };
 
-inline bool32 EndOfChunk(riff::iterator Iterator)
+constexpr inline bool32 EndOfChunk(riff::iterator Iterator)
 {
   return Iterator.Current >= Iterator.End;
 }
 
-riff::chunk *GetChunk(buffer Buffer);
+riff::chunk *GetChunk(key Length, void *Data);
 riff::iterator GetIterator(riff::chunk *Chunk);
 riff::iterator GetIteratorByID(riff::chunk *Chunk, u32 ID);
 riff::iterator NextSubChunk(riff::iterator Iterator);

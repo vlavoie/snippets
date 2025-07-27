@@ -261,6 +261,11 @@ i32 main(i32 Argc, char *Argv[])
 
     fclose(File);
   }
+  else
+  {
+    fprintf(stderr, "Failed to read TGA file.");
+    return 1;
+  }
 
   tga::texture *Texture = tga::Decompress(TGALength, TGAData);
 

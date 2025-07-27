@@ -182,14 +182,15 @@ void ShutdownPulseAudio()
   fprintf(stdout, "Shutting down PulseAudio.\n");
   // clear leftover PulseAudio playback
   fprintf(stdout, "\tFlushing PulseAudio streams.\n");
-  for (key i = 0; i < AUDIOSTREAM_COUNT; i++)
+  for (key StreamIndex = 0; StreamIndex < AUDIOSTREAM_COUNT; StreamIndex++)
   {
-    fprintf(stdout, "\tFlushing PulseAudio stream %zu.\n", i);
-    pa_stream_flush(PulseAudio.Streams[i], NULL, NULL);
-    pa_stream_disconnect(PulseAudio.Streams[i]);
+    fprintf(stdout, "\tFlushing PulseAudio stream %zu.\n", StreamIndex);
+    pa_stream_flush(PulseAudio.Streams[StreamIndex], NULL, NULL);
+    pa_stream_disconnect(PulseAudio.Streams[StreamIndex]);
   }
-  int r;
-  pa_mainloop_iterate(PulseAudio.MainLoop, 0, &r);
+
+  i32 ReturnCode;
+  pa_mainloop_iterate(PulseAudio.MainLoop, 0, &ReturnCode);
 
   fprintf(stdout, "\tFreeing PulseAudio mainloop.\n");
   pa_context_disconnect(PulseAudio.Context);
@@ -202,6 +203,34 @@ i32 main(i32 Argc, char *Argv[])
   if (Argc < 2)
   {
     fprintf(stderr, "WAV file argument is required to play audio.");
+    return 1;
+  }
+
+  FILE *File = fopen(Argv[1], "r");
+  key WavLength = 0;
+  void *WavData = 0x0;
+
+  if (File)
+  {
+    fseek(File, 0, SEEK_END);
+    WavLength = ftell(File);
+    WavData = malloc(sizeof(byte) * WavLength);
+    rewind(File);
+    fread(WavData, 1, WavLength, File);
+
+    fclose(File);
+  }
+  else
+  {
+    fprintf(stderr, "Failed to read WAV file.");
+    return 1;
+  }
+
+  wav::audio Wav = wav::GetAudio(WavLength, WavData);
+
+  if (Wav.SampleCount == 0)
+  {
+    fprintf(stderr, "Failed to parse WAV file.");
     return 1;
   }
 
