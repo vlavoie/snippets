@@ -22,13 +22,13 @@
       "preLaunchTask": "CompileImage"
     },
     {
-      "name": "DebugModel",
+      "name": "DebugAudio",
       "type": "cppdbg",
       "request": "launch",
       // Resolved by CMake Tools:
-      "program": "${workspaceFolder}/build/model_d",
+      "program": "${workspaceFolder}/build/audio_d",
       "args": [
-        "assets/test.obj"
+        "assets/test.wav"
       ],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
@@ -36,7 +36,7 @@
       "externalConsole": false,
       "MIMode": "gdb",
       "setupCommands": [],
-      "preLaunchTask": "CompileModel"
+      "preLaunchTask": "CompileAudio"
     }
   ]
 }

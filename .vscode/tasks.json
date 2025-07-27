@@ -10,9 +10,9 @@
       "group": "build"
     },
     {
-      "label": "CompileModel",
+      "label": "CompileAudio",
       "type": "shell",
-      "command": "${workspaceFolder}/examples/model/compile.sh",
+      "command": "${workspaceFolder}/examples/audio/compile.sh",
       "group": "build"
     }
   ]
