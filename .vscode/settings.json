@@ -1,6 +1,7 @@
 {
   "files.associations": {
     "__node_handle": "cpp",
-    "cstddef": "cpp"
+    "cstddef": "cpp",
+    "algorithm": "cpp"
   }
 }

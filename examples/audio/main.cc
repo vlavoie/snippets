@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // glibc
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 // pulse audio
 #include <pulse/error.h>
@@ -29,6 +30,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <pulse/stream.h>
 
 #define AUDIOSTREAM_COUNT 1
+#define AUDIOSTREAM_SAMPLE_RATE 44100
 
 // pulse audio variables
 struct pulse_audio
@@ -48,11 +50,11 @@ bool32 InitializePulseAudio()
   PulseAudio.MainLoop = pa_mainloop_new();
   if (PulseAudio.MainLoop)
   {
-    fprintf(stdout, "\tSuccessfully allocated PulseAudio mainloop.\n");
+    fprintf(stdout, "Successfully allocated PulseAudio mainloop.\n");
   }
   else
   {
-    fprintf(stderr, "\tFailed to allocate PulseAudio mainloop.\n");
+    fprintf(stderr, "Failed to allocate PulseAudio mainloop.\n");
     return false;
   }
 
@@ -60,18 +62,18 @@ bool32 InitializePulseAudio()
   PulseAudio.Context = pa_context_new(PulseAudio.MainLoopAPI, "Sharktooth");
   if (PulseAudio.Context)
   {
-    fprintf(stdout, "\tSuccessfully allocated PulseAudio context.\n");
+    fprintf(stdout, "Successfully allocated PulseAudio context.\n");
   }
   else
   {
-    fprintf(stderr, "\tFailed to allocate PulseAudio context.\n");
+    fprintf(stderr, "Failed to allocate PulseAudio context.\n");
     return false;
   }
 
   i32 ContextError = pa_context_connect(PulseAudio.Context, NULL, PA_CONTEXT_NOFLAGS, NULL);
   if (ContextError < 0)
   {
-    fprintf(stderr, "\tFailed to connect PulseAudio context: %s\n", pa_strerror(ContextError));
+    fprintf(stderr, "Failed to connect PulseAudio context: %s\n", pa_strerror(ContextError));
     return false;
   }
 
@@ -85,17 +87,17 @@ bool32 InitializePulseAudio()
       {
       case PA_CONTEXT_UNCONNECTED:
       case PA_CONTEXT_CONNECTING:
-        fprintf(stdout, "\tConnecting PulseAudio context...\n");
+        fprintf(stdout, "Connecting PulseAudio context...\n");
         break;
       case PA_CONTEXT_AUTHORIZING:
-        fprintf(stdout, "\tAuthorizing PulseAudio context...\n");
+        fprintf(stdout, "Authorizing PulseAudio context...\n");
         break;
       case PA_CONTEXT_SETTING_NAME:
-        fprintf(stdout, "\tSetting name of PulseAudio context...\n");
+        fprintf(stdout, "Setting name of PulseAudio context...\n");
         break;
       case PA_CONTEXT_FAILED:
       case PA_CONTEXT_TERMINATED:
-        fprintf(stderr, "\tFailed connecting PulseAudio context.\n");
+        fprintf(stderr, "Failed connecting PulseAudio context.\n");
         return false;
       default:
         break;
@@ -105,12 +107,12 @@ bool32 InitializePulseAudio()
     pa_mainloop_iterate(PulseAudio.MainLoop, 0, &MainLoopValue);
     PreviousContextState = ContextState;
   }
-  fprintf(stdout, "\tSuccessfully connected PulseAudio context.\n");
+  fprintf(stdout, "Successfully connected PulseAudio context.\n");
 
   pa_sample_spec SampleSpec;
   SampleSpec.format = PA_SAMPLE_S16NE;
   SampleSpec.channels = 1;
-  SampleSpec.rate = 44100;
+  SampleSpec.rate = AUDIOSTREAM_SAMPLE_RATE;
 
   pa_channel_map ChannelMap;
   pa_channel_map_init_mono(&ChannelMap);
@@ -122,11 +124,11 @@ bool32 InitializePulseAudio()
 
     if (PulseAudio.Streams[StreamIndex])
     {
-      fprintf(stdout, "\tSuccessfully allocated PulseAudio stream %zu.\n", StreamIndex);
+      fprintf(stdout, "Successfully allocated PulseAudio stream %zu.\n", StreamIndex);
     }
     else
     {
-      fprintf(stderr, "\tFailed to allocate PulseAudio stream %zu\n", StreamIndex);
+      fprintf(stderr, "Failed to allocate PulseAudio stream %zu\n", StreamIndex);
       return false;
     }
 
@@ -142,7 +144,7 @@ bool32 InitializePulseAudio()
 
     if (StreamError)
     {
-      fprintf(stderr, "\tFailed to connect PulseAudio stream to playback: %s\n",
+      fprintf(stderr, "Failed to connect PulseAudio stream to playback: %s\n",
               pa_strerror(StreamError));
       return false;
     }
@@ -157,11 +159,11 @@ bool32 InitializePulseAudio()
         {
         case PA_STREAM_UNCONNECTED:
         case PA_STREAM_CREATING:
-          fprintf(stdout, "\tConnecting PulseAudio stream %zu...\n", StreamIndex);
+          fprintf(stdout, "Connecting PulseAudio stream %zu...\n", StreamIndex);
           break;
         case PA_STREAM_FAILED:
         case PA_STREAM_TERMINATED:
-          fprintf(stderr, "\tFailed connecting PulseAudio stream %zu.\n", StreamIndex);
+          fprintf(stderr, "Failed connecting PulseAudio stream %zu.\n", StreamIndex);
           return false;
         default:
           break;
@@ -171,7 +173,7 @@ bool32 InitializePulseAudio()
       pa_mainloop_iterate(PulseAudio.MainLoop, 0, &MainLoopValue);
       PreviousStreamState = StreamState;
     }
-    fprintf(stdout, "\tSuccessfully connected PulseAudio stream %zu.\n", StreamIndex);
+    fprintf(stdout, "Successfully connected PulseAudio stream %zu.\n", StreamIndex);
   }
 
   return true;
@@ -181,10 +183,10 @@ void ShutdownPulseAudio()
 {
   fprintf(stdout, "Shutting down PulseAudio.\n");
   // clear leftover PulseAudio playback
-  fprintf(stdout, "\tFlushing PulseAudio streams.\n");
+  fprintf(stdout, "Flushing PulseAudio streams.\n");
   for (key StreamIndex = 0; StreamIndex < AUDIOSTREAM_COUNT; StreamIndex++)
   {
-    fprintf(stdout, "\tFlushing PulseAudio stream %zu.\n", StreamIndex);
+    fprintf(stdout, "Flushing PulseAudio stream %zu.\n", StreamIndex);
     pa_stream_flush(PulseAudio.Streams[StreamIndex], NULL, NULL);
     pa_stream_disconnect(PulseAudio.Streams[StreamIndex]);
   }
@@ -192,7 +194,7 @@ void ShutdownPulseAudio()
   i32 ReturnCode;
   pa_mainloop_iterate(PulseAudio.MainLoop, 0, &ReturnCode);
 
-  fprintf(stdout, "\tFreeing PulseAudio mainloop.\n");
+  fprintf(stdout, "Freeing PulseAudio mainloop.\n");
   pa_context_disconnect(PulseAudio.Context);
   pa_mainloop_quit(PulseAudio.MainLoop, 0);
   pa_mainloop_free(PulseAudio.MainLoop);
@@ -234,7 +236,79 @@ i32 main(i32 Argc, char *Argv[])
     return 1;
   }
 
-  InitializePulseAudio();
+  if (InitializePulseAudio() == 0)
+  {
+    fprintf(stderr, "Failed to initialize PulseAudio.");
+    return 1;
+  }
+
+  pa_stream *PulseAudioStream = PulseAudio.Streams[0];
+  void *StreamBuffer;
+
+  key WriteableBytes = pa_stream_writable_size(PulseAudioStream);
+  key ChunkLength = WriteableBytes;
+  key Offset = 0;
+  key StreamBufferLength = Wav.SampleCount * sizeof(wav::sample);
+
+  i32 PulseAudioError;
+
+  while (Offset * sizeof(wav::sample) < StreamBufferLength)
+  {
+    key BytesLeft = StreamBufferLength - Offset * sizeof(wav::sample);
+
+    if (WriteableBytes > 0)
+    {
+      ChunkLength = ChunkLength < BytesLeft ? ChunkLength : BytesLeft;
+      PulseAudioError = pa_stream_begin_write(PulseAudioStream, &StreamBuffer, &ChunkLength);
+
+      if (PulseAudioError < 0)
+      {
+        fprintf(stderr, "Failed to begin write to PulseAudio stream: %s\n",
+                pa_strerror(PulseAudioError));
+      }
+      else
+      {
+        if (ChunkLength < WriteableBytes)
+        {
+          fprintf(stderr, "Expected %lu bytes for stream, got %lu, producing %lu samples\n",
+                  WriteableBytes, ChunkLength, ChunkLength / sizeof(wav::sample));
+        }
+
+        memcpy(StreamBuffer, Wav.SampleData + Offset, ChunkLength);
+
+        if (ChunkLength > 0)
+        {
+          PulseAudioError = pa_stream_write(PulseAudioStream, StreamBuffer, ChunkLength, NULL, 0,
+                                            PA_SEEK_RELATIVE);
+
+          // this is a workaround for a weird issue where short chunks/sounds are not sent to
+          // pulseaudio server, better than the alternative of sending continuous mute audio
+          if (StreamBufferLength < ChunkLength)
+          {
+            pa_stream_drain(PulseAudioStream, NULL, NULL);
+          }
+
+          if (PulseAudioError < 0)
+          {
+            fprintf(stderr, "Failed to write to PulseAudio stream: %s\n",
+                    pa_strerror(PulseAudioError));
+          }
+        }
+        else
+        {
+          pa_stream_cancel_write(PulseAudioStream);
+        }
+      }
+    }
+
+    pa_mainloop_iterate(PulseAudio.MainLoop, 0, &PulseAudioError);
+    Offset += ChunkLength / sizeof(wav::sample);
+    key SleepTime = ChunkLength * 1000 / sizeof(wav::sample) / AUDIOSTREAM_SAMPLE_RATE;
+    SleepTime = SleepTime > 100
+                    ? SleepTime - 100
+                    : SleepTime; // 100 is an arbitraty value to prevent gaps in the audio
+    pa_msleep(SleepTime);
+  }
 
   ShutdownPulseAudio();
 }
