@@ -57,7 +57,6 @@ constexpr inline u64 Mix(const u64 Seed, const u32 Value)
   Result ^= __HASH__ROTATE_RIGHT(Result, 22);
   return Result + Seed;
 }
-// End of stb_ds code
 
 constexpr inline u64 Mix(const u32 Value)
 {
@@ -79,7 +78,7 @@ inline u64 Mix(const char *String)
 {
   return hash::Mix(__HASH__DEFAULT_SEED, String);
 }
-//////////////////////////////////////////
+/////////// End of stb_ds code ///////////
 
 constexpr inline u64 CantorPair(const u32 X, const u32 Y)
 {
