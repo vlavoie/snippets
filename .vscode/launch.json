@@ -37,6 +37,25 @@
       "MIMode": "gdb",
       "setupCommands": [],
       "preLaunchTask": "CompileAudio"
+    },
+    {
+      "name": "DebugCartridge",
+      "type": "cppdbg",
+      "request": "launch",
+      // Resolved by CMake Tools:
+      "program": "${workspaceFolder}/build/cartridge_d",
+      "args": [
+        "assets/test.wav",
+        "assets/test.obj",
+        "build/test.crpk"
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [],
+      "preLaunchTask": "CompileCartridge"
     }
   ]
 }

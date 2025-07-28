@@ -14,6 +14,12 @@
       "type": "shell",
       "command": "${workspaceFolder}/examples/audio/compile.sh",
       "group": "build"
+    },
+    {
+      "label": "CompileCartridge",
+      "type": "shell",
+      "command": "${workspaceFolder}/examples/cartridge/compile.sh",
+      "group": "build"
     }
   ]
 }
