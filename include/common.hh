@@ -21,6 +21,12 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 // libc
 #include <stddef.h>
 #include <stdint.h>
+
+#ifndef SysAllocate
+#include <stdlib.h>
+#define SysAllocate(_Type, _N) (_Type *)calloc(_N, sizeof(_Type))
+#define SysFree(_Ptr) free(_Ptr)
+#endif
 //
 
 typedef int8_t i8;

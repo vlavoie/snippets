@@ -170,7 +170,7 @@ static x_state WindowState;
 void GLAPIENTRY OpenGLMessageCallback(GLenum source, GLenum Type, GLuint Id, GLenum Severity,
                                       GLsizei Length, const GLchar *Message, const void *UserParam)
 {
-  fprintf(stderr, "GL CALLBACK: %s Type = 0x%x, Severity = 0x%x, Message = %s\n",
+  fprintf(stdout, "GL CALLBACK: %s Type = 0x%x, Severity = 0x%x, Message = %s\n",
           (Type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), Type, Severity, Message);
 }
 
@@ -190,7 +190,7 @@ GLuint CompileShader(const GLchar *const *ShaderSource, GLenum Type)
   {
     char Buffer[4096];
     glGetShaderInfoLog(ShaderId, 4096, NULL, Buffer);
-    fprintf(stderr, "%s Shader failed to compile: %s\n",
+    fprintf(stdout, "%s Shader failed to compile: %s\n",
             Type == GL_FRAGMENT_SHADER ? "Fragment" : "Vertex", Buffer);
   }
 
@@ -231,10 +231,10 @@ i32 HandleX11Error(Display *XDisplay, XErrorEvent *XError)
   char Message[256];
   if (XGetErrorText(XDisplay, XError->error_code, Message, sizeof(Message)))
   {
-    fprintf(stderr, "Failed to parse error message %d", XError->error_code);
+    fprintf(stdout, "Failed to parse error message %d\n", XError->error_code);
     return 1;
   }
-  fprintf(stderr, "X11 error code %d: %s", XError->error_code, Message);
+  fprintf(stdout, "X11 error code %d: %s\n", XError->error_code, Message);
 
   return 0;
 }
@@ -243,7 +243,7 @@ i32 main(i32 Argc, char *Argv[])
 {
   if (Argc < 2)
   {
-    fprintf(stderr, "TGA file argument is required to render image.");
+    fprintf(stdout, "TGA file argument is required to render image.\n");
     return 1;
   }
 
@@ -263,7 +263,7 @@ i32 main(i32 Argc, char *Argv[])
   }
   else
   {
-    fprintf(stderr, "Failed to read TGA file.");
+    fprintf(stdout, "Failed to read TGA file.\n");
     return 1;
   }
 
@@ -271,7 +271,7 @@ i32 main(i32 Argc, char *Argv[])
 
   if (Texture == 0x0)
   {
-    fprintf(stderr, "Failed to parse TGA file.");
+    fprintf(stdout, "Failed to parse TGA file.\n");
     return 1;
   }
 
@@ -287,7 +287,7 @@ i32 main(i32 Argc, char *Argv[])
 
   if (!WindowState.Display)
   {
-    fprintf(stderr, "Failed to connect to x11 server.\n");
+    fprintf(stdout, "Failed to connect to x11 server.\n");
     return 1;
   }
 
@@ -297,7 +297,7 @@ i32 main(i32 Argc, char *Argv[])
 
   if (!WindowState.VisualInfo)
   {
-    fprintf(stderr, "No appropriate display found\n");
+    fprintf(stdout, "No appropriate display found\n");
     return 1;
   }
   else
@@ -385,7 +385,7 @@ i32 main(i32 Argc, char *Argv[])
   }
   else
   {
-    fprintf(stderr, "Failed to shutdown GLX context\n");
+    fprintf(stdout, "Failed to shutdown GLX context\n");
     return 1;
   }
 
@@ -397,7 +397,7 @@ i32 main(i32 Argc, char *Argv[])
   }
   else
   {
-    fprintf(stderr, "Failed to destroy x11 window.\n");
+    fprintf(stdout, "Failed to destroy x11 window.\n");
     return 1;
   }
 
@@ -407,7 +407,7 @@ i32 main(i32 Argc, char *Argv[])
   }
   else
   {
-    fprintf(stderr, "Failed to destroy x11 root window.\n");
+    fprintf(stdout, "Failed to destroy x11 root window.\n");
     return 1;
   }
 

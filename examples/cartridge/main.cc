@@ -28,8 +28,8 @@ i32 main(i32 Argc, const char *Argv[])
 {
   if (Argc < 3)
   {
-    fprintf(stderr,
-            "At least 1 input file is required for packing and 1 output for the packed files.");
+    fprintf(stdout,
+            "At least 1 input file is required for packing and 1 output for the packed files.\n");
     return 1;
   }
 
@@ -39,12 +39,12 @@ i32 main(i32 Argc, const char *Argv[])
 
   if (ErrorCode >= crpk::RETURN_CODE_INPUT_FILE_ERROR)
   {
-    fprintf(stderr, "Error reading input file '%s'", Argv[ErrorCode]);
+    fprintf(stdout, "Error reading input file '%s'\n", Argv[ErrorCode]);
     return 1;
   }
   else if (ErrorCode == crpk::RETURN_CODE_OUTPUT_ERROR)
   {
-    fprintf(stderr, "Error writing output file '%s'", OutputFile);
+    fprintf(stdout, "Error writing output file '%s'\n", OutputFile);
     return 1;
   }
 

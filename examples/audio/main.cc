@@ -54,7 +54,7 @@ bool32 InitializePulseAudio()
   }
   else
   {
-    fprintf(stderr, "Failed to allocate PulseAudio mainloop.\n");
+    fprintf(stdout, "Failed to allocate PulseAudio mainloop.\n");
     return false;
   }
 
@@ -66,14 +66,14 @@ bool32 InitializePulseAudio()
   }
   else
   {
-    fprintf(stderr, "Failed to allocate PulseAudio context.\n");
+    fprintf(stdout, "Failed to allocate PulseAudio context.\n");
     return false;
   }
 
   i32 ContextError = pa_context_connect(PulseAudio.Context, NULL, PA_CONTEXT_NOFLAGS, NULL);
   if (ContextError < 0)
   {
-    fprintf(stderr, "Failed to connect PulseAudio context: %s\n", pa_strerror(ContextError));
+    fprintf(stdout, "Failed to connect PulseAudio context: %s\n", pa_strerror(ContextError));
     return false;
   }
 
@@ -97,7 +97,7 @@ bool32 InitializePulseAudio()
         break;
       case PA_CONTEXT_FAILED:
       case PA_CONTEXT_TERMINATED:
-        fprintf(stderr, "Failed connecting PulseAudio context.\n");
+        fprintf(stdout, "Failed connecting PulseAudio context.\n");
         return false;
       default:
         break;
@@ -128,7 +128,7 @@ bool32 InitializePulseAudio()
     }
     else
     {
-      fprintf(stderr, "Failed to allocate PulseAudio stream %zu\n", StreamIndex);
+      fprintf(stdout, "Failed to allocate PulseAudio stream %zu\n", StreamIndex);
       return false;
     }
 
@@ -144,7 +144,7 @@ bool32 InitializePulseAudio()
 
     if (StreamError)
     {
-      fprintf(stderr, "Failed to connect PulseAudio stream to playback: %s\n",
+      fprintf(stdout, "Failed to connect PulseAudio stream to playback: %s\n",
               pa_strerror(StreamError));
       return false;
     }
@@ -163,7 +163,7 @@ bool32 InitializePulseAudio()
           break;
         case PA_STREAM_FAILED:
         case PA_STREAM_TERMINATED:
-          fprintf(stderr, "Failed connecting PulseAudio stream %zu.\n", StreamIndex);
+          fprintf(stdout, "Failed connecting PulseAudio stream %zu.\n", StreamIndex);
           return false;
         default:
           break;
@@ -204,7 +204,7 @@ i32 main(i32 Argc, char *Argv[])
 {
   if (Argc < 2)
   {
-    fprintf(stderr, "WAV file argument is required to play audio.");
+    fprintf(stdout, "WAV file argument is required to play audio.\n");
     return 1;
   }
 
@@ -224,7 +224,7 @@ i32 main(i32 Argc, char *Argv[])
   }
   else
   {
-    fprintf(stderr, "Failed to read WAV file.");
+    fprintf(stdout, "Failed to read WAV file.\n");
     return 1;
   }
 
@@ -232,13 +232,13 @@ i32 main(i32 Argc, char *Argv[])
 
   if (Wav.SampleCount == 0)
   {
-    fprintf(stderr, "Failed to parse WAV file.");
+    fprintf(stdout, "Failed to parse WAV file.\n");
     return 1;
   }
 
   if (InitializePulseAudio() == 0)
   {
-    fprintf(stderr, "Failed to initialize PulseAudio.");
+    fprintf(stdout, "Failed to initialize PulseAudio.\n");
     return 1;
   }
 
@@ -263,14 +263,14 @@ i32 main(i32 Argc, char *Argv[])
 
       if (PulseAudioError < 0)
       {
-        fprintf(stderr, "Failed to begin write to PulseAudio stream: %s\n",
+        fprintf(stdout, "Failed to begin write to PulseAudio stream: %s\n",
                 pa_strerror(PulseAudioError));
       }
       else
       {
         if (ChunkLength < WriteableBytes)
         {
-          fprintf(stderr, "Expected %lu bytes for stream, got %lu, producing %lu samples\n",
+          fprintf(stdout, "Expected %lu bytes for stream, got %lu, producing %lu samples\n",
                   WriteableBytes, ChunkLength, ChunkLength / sizeof(wav::sample));
         }
 
@@ -290,7 +290,7 @@ i32 main(i32 Argc, char *Argv[])
 
           if (PulseAudioError < 0)
           {
-            fprintf(stderr, "Failed to write to PulseAudio stream: %s\n",
+            fprintf(stdout, "Failed to write to PulseAudio stream: %s\n",
                     pa_strerror(PulseAudioError));
           }
         }

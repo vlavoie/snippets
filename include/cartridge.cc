@@ -149,7 +149,7 @@ crpk::buffer crpk::GetKeyData(crpk::cartridge *Cartridge, const char *AssetFile)
   if (Block)
   {
     return {
-        .Length = Block->Length,
+        .Length = key(Block->Length),
         .Data = Cartridge->Data + Block->StartOffset,
     };
   }
