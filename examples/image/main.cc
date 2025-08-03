@@ -255,7 +255,7 @@ i32 main(i32 Argc, char *Argv[])
   {
     fseek(File, 0, SEEK_END);
     TGALength = ftell(File);
-    TGAData = malloc(sizeof(byte) * TGALength);
+    TGAData = SysAllocate(byte, TGALength);
     rewind(File);
     fread(TGAData, 1, TGALength, File);
 

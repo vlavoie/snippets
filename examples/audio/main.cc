@@ -216,7 +216,7 @@ i32 main(i32 Argc, char *Argv[])
   {
     fseek(File, 0, SEEK_END);
     WavLength = ftell(File);
-    WavData = malloc(sizeof(byte) * WavLength);
+    WavData = SysAllocate(byte, WavLength);
     rewind(File);
     fread(WavData, 1, WavLength, File);
 
