@@ -21,6 +21,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include "common.hh"
 
 // math.h
+#ifndef __MATH2D__Sinf
+#include <math.h>
 #define __MATH2D__Sinf sinf
 #define __MATH2D__Cosf cosf
 #define __MATH2D__Powf powf
@@ -33,6 +35,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define __MATH2D__Roundf roundf
 #define __MATH2D__Atan2 atan2f
 #define __MATH2D__Sign copysignf
+#endif
 //
 
 #define MATH2D_EPSILON f32(2.2204460492503130808472633361816E-16f)
