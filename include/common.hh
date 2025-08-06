@@ -73,3 +73,5 @@ typedef u64 tick;
   }
 
 #define FourCC(A, B, C, D) ((u32(D) << 24) | (u32(C) << 16) | (u32(B) << 8) | (u32(A)))
+
+#define ArrayLength(_Array) (sizeof(_Array) / sizeof(*_Array))

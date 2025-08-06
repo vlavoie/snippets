@@ -534,6 +534,26 @@ constexpr inline f32 DistanceY(const box Left, const box Right)
   return Absolute(Maximum(Right.AA.Y - Left.BB.Y, Left.AA.Y - Right.BB.Y));
 }
 
+constexpr inline f32 DistanceX(const vec2 Point, const box Box)
+{
+  return Absolute(Maximum(Box.AA.X - Point.X, Point.X - Box.BB.X));
+}
+
+constexpr inline f32 DistanceY(const vec2 Point, const box Box)
+{
+  return Absolute(Maximum(Box.AA.Y - Point.Y, Point.Y - Box.BB.Y));
+}
+
+constexpr inline f32 DistanceX(const box Box, const vec2 Point)
+{
+  return DistanceX(Point, Box);
+}
+
+constexpr inline f32 DistanceY(const box Box, const vec2 Point)
+{
+  return DistanceY(Point, Box);
+}
+
 constexpr inline f32 OverlapX(const box Left, const box Right)
 {
   return Maximum(0, Minimum(Left.BB.X, Right.BB.X) - Maximum(Left.AA.X, Right.AA.X));
