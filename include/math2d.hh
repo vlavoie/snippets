@@ -621,7 +621,7 @@ constexpr inline bool32 Intersects(box Box, ray Ray)
   TMin = Maximum(TMin, Minimum(TY0, TY1));
   TMax = Minimum(TMax, Maximum(TY0, TY1));
 
-  return TMax >= TMin;
+  return TMax >= TMin && TMax >= 0.0f;
 }
 
 constexpr inline bool32 Intersects(ray Ray, box Box)
