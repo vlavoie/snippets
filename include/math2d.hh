@@ -599,7 +599,7 @@ constexpr inline bool32 Intersects(const line L, const line R)
                 (L.End.Y - L.Start.Y) * (L.Start.X - R.Start.X)) /
                ((R.End.Y - R.Start.Y) * (L.End.X - L.Start.X) -
                 (R.End.X - R.Start.X) * (L.End.Y - L.Start.Y));
-  return DeltaA >= 0 && DeltaA <= 1 && DeltaB >= 0 && DeltaB <= 1;
+  return DeltaA >= 0.0f && DeltaA <= 1.0f && DeltaB >= 0.0f && DeltaB <= 1.0f;
 }
 
 constexpr inline bool32 Intersects(const line Line, const box Box)
