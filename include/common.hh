@@ -75,3 +75,31 @@ typedef u64 tick;
 #define FourCC(A, B, C, D) ((u32(D) << 24) | (u32(C) << 16) | (u32(B) << 8) | (u32(A)))
 
 #define ArrayLength(_Array) (sizeof(_Array) / sizeof(*_Array))
+
+typedef u32 color;
+
+constexpr inline u32 PackColor(f32 R, f32 G, f32 B, f32 A)
+{
+  return u32((u8(R * f32(U8_MAX)) << 24) | (u8(G * f32(U8_MAX)) << 16) |
+             (u8(B * f32(U8_MAX)) << 8) | (u8(A * f32(U8_MAX))));
+};
+
+constexpr inline f32 UnpackRed(u32 Color)
+{
+  return f32((Color & 0xFF000000) >> 24) / f32(U8_MAX);
+}
+
+constexpr inline f32 UnpackGreen(u32 Color)
+{
+  return f32((Color & 0x00FF0000) >> 16) / f32(U8_MAX);
+}
+
+constexpr inline f32 UnpackBlue(u32 Color)
+{
+  return f32((Color & 0x0000FF00) >> 8) / f32(U8_MAX);
+}
+
+constexpr inline f32 UnpackAlpha(u32 Color)
+{
+  return f32(Color & 0x000000FF) / f32(U8_MAX);
+}

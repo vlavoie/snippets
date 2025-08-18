@@ -52,6 +52,11 @@ struct vec2
   f32 X, Y;
 };
 
+struct matrix2
+{
+  f32 X0, Y0, X1, Y1;
+};
+
 struct box
 {
   vec2 AA, BB;
@@ -133,17 +138,17 @@ constexpr inline i32 Sign(const f32 Value)
   return __MATH2D__Sign(1.0f, Value);
 }
 
-constexpr inline float Square(const float V)
+constexpr inline f32 Square(const f32 V)
 {
   return V * V;
 }
 
-constexpr inline f32 Lerp(const f32 A, const f32 B, const f32 T)
+constexpr inline f32 Lerp(const f32 A, const f32 B, const f32 Theta)
 {
-  return A * (1.0f - T) + B * T;
+  return A * (1.0f - Theta) + B * Theta;
 }
 
-constexpr inline f32 LerpAngle(const f32 A, const f32 B, const f32 T)
+constexpr inline f32 LerpAngle(const f32 A, const f32 B, const f32 Theta)
 {
   f32 Correction = A, Difference = B - A;
 
@@ -156,36 +161,10 @@ constexpr inline f32 LerpAngle(const f32 A, const f32 B, const f32 T)
     Correction -= MATH2D_PI_TWO;
   }
 
-  return Lerp(Correction, B, T);
+  return Lerp(Correction, B, Theta);
 }
 
-constexpr inline f32 Rotate(const f32 A, const f32 B, const f32 T)
-{
-  f32 Difference = B - A;
-  f32 Correction = A;
-
-  if (Difference > MATH2D_PI)
-  {
-    Correction += MATH2D_PI_TWO;
-    Difference = B - Correction;
-  }
-  else if (Difference < -MATH2D_PI)
-  {
-    Correction -= MATH2D_PI_TWO;
-    Difference = B - Correction;
-  }
-
-  f32 Rotation = T * Sign(Difference);
-
-  if (Absolute(Difference) < T)
-  {
-    return Correction + Difference;
-  }
-
-  return Correction + Rotation;
-}
-
-constexpr inline f32 LerpAngle(const f32 A, const f32 B, const f32 T, const f32 Direction)
+constexpr inline f32 LerpAngle(const f32 A, const f32 B, const f32 Theta, const f32 Direction)
 {
   f32 Correction = B;
 
@@ -204,7 +183,33 @@ constexpr inline f32 LerpAngle(const f32 A, const f32 B, const f32 T, const f32 
     }
   }
 
-  return Lerp(A, Correction, T);
+  return Lerp(A, Correction, Theta);
+}
+
+constexpr inline f32 Rotate(const f32 A, const f32 B, const f32 Theta)
+{
+  f32 Difference = B - A;
+  f32 Correction = A;
+
+  if (Difference > MATH2D_PI)
+  {
+    Correction += MATH2D_PI_TWO;
+    Difference = B - Correction;
+  }
+  else if (Difference < -MATH2D_PI)
+  {
+    Correction -= MATH2D_PI_TWO;
+    Difference = B - Correction;
+  }
+
+  f32 Rotation = Theta * Sign(Difference);
+
+  if (Absolute(Difference) < Theta)
+  {
+    return Correction + Difference;
+  }
+
+  return Correction + Rotation;
 }
 
 constexpr inline vec2 operator+(const vec2 L, const vec2 R)
@@ -215,7 +220,7 @@ constexpr inline vec2 operator+(const vec2 L, const vec2 R)
   };
 }
 
-constexpr inline vec2 operator+(const vec2 L, const float V)
+constexpr inline vec2 operator+(const vec2 L, const f32 V)
 {
   return {
       .X = L.X + V,
@@ -223,12 +228,12 @@ constexpr inline vec2 operator+(const vec2 L, const float V)
   };
 }
 
-constexpr inline vec2 operator+(const float V, const vec2 R)
+constexpr inline vec2 operator+(const f32 V, const vec2 R)
 {
   return R + V;
 }
 
-constexpr inline vec2 &operator+=(vec2 &L, const float V)
+constexpr inline vec2 &operator+=(vec2 &L, const f32 V)
 {
   L = L + V;
   return L;
@@ -248,7 +253,7 @@ constexpr inline vec2 operator-(const vec2 L, const vec2 R)
   };
 }
 
-constexpr inline vec2 operator-(const vec2 L, const float V)
+constexpr inline vec2 operator-(const vec2 L, const f32 V)
 {
   return {
       .X = L.X - V,
@@ -256,7 +261,7 @@ constexpr inline vec2 operator-(const vec2 L, const float V)
   };
 }
 
-constexpr inline vec2 operator-(const float V, const vec2 R)
+constexpr inline vec2 operator-(const f32 V, const vec2 R)
 {
   return {
       .X = V - R.X,
@@ -264,7 +269,7 @@ constexpr inline vec2 operator-(const float V, const vec2 R)
   };
 }
 
-constexpr inline vec2 operator-=(vec2 &L, const float V)
+constexpr inline vec2 operator-=(vec2 &L, const f32 V)
 {
   L = L - V;
   return L;
@@ -276,7 +281,7 @@ constexpr inline vec2 &operator-=(vec2 &L, const vec2 R)
   return L;
 }
 
-constexpr inline vec2 operator*(const vec2 L, const float V)
+constexpr inline vec2 operator*(const vec2 L, const f32 V)
 {
   return {
       .X = L.X * V,
@@ -284,7 +289,7 @@ constexpr inline vec2 operator*(const vec2 L, const float V)
   };
 }
 
-constexpr inline vec2 operator*(const float V, const vec2 R)
+constexpr inline vec2 operator*(const f32 V, const vec2 R)
 {
   return R * V;
 }
@@ -297,7 +302,7 @@ constexpr inline vec2 operator*(const vec2 L, const vec2 R)
   };
 }
 
-constexpr inline vec2 &operator*=(vec2 &L, const float V)
+constexpr inline vec2 &operator*=(vec2 &L, const f32 V)
 {
   L = L * V;
   return L;
@@ -309,7 +314,7 @@ constexpr inline vec2 &operator*=(vec2 &L, const vec2 R)
   return L;
 }
 
-constexpr inline vec2 operator/(const vec2 L, const float V)
+constexpr inline vec2 operator/(const vec2 L, const f32 V)
 {
   return {
       .X = L.X / V,
@@ -317,7 +322,7 @@ constexpr inline vec2 operator/(const vec2 L, const float V)
   };
 }
 
-constexpr inline vec2 operator/(const float V, const vec2 R)
+constexpr inline vec2 operator/(const f32 V, const vec2 R)
 {
   return {
       .X = V / R.X,
@@ -333,7 +338,7 @@ constexpr inline vec2 operator/(const vec2 L, const vec2 R)
   };
 }
 
-constexpr inline vec2 &operator/=(vec2 &L, const float V)
+constexpr inline vec2 &operator/=(vec2 &L, const f32 V)
 {
   L = L / V;
   return L;
@@ -343,6 +348,37 @@ constexpr inline vec2 &operator/=(vec2 &L, const vec2 R)
 {
   L = L / R;
   return L;
+}
+
+constexpr inline vec2 operator*(const vec2 V, const matrix2 M)
+{
+  return {
+      .X = M.X0 * V.X + M.Y0 * V.Y,
+      .Y = M.X1 * V.X + M.Y1 * V.Y,
+  };
+}
+
+constexpr inline vec2 operator*(const matrix2 M, const vec2 V)
+{
+  return V * M;
+}
+
+constexpr inline vec2 &operator*=(vec2 &L, const matrix2 M)
+{
+  L = L * M;
+  return L;
+}
+
+constexpr inline vec2 Rotate(const vec2 V, const f32 Theta)
+{
+  matrix2 M = {
+      .X0 = Cos(Theta),
+      .Y0 = Sin(Theta),
+      .X1 = -Sin(Theta),
+      .Y1 = Cos(Theta),
+  };
+
+  return V * M;
 }
 
 constexpr inline f32 FastLength(const vec2 Value)
