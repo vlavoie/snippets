@@ -143,9 +143,9 @@ constexpr inline f32 Square(const f32 V)
   return V * V;
 }
 
-constexpr inline f32 Lerp(const f32 A, const f32 B, const f32 Theta)
+constexpr inline f32 Lerp(const f32 A, const f32 B, const f32 Delta)
 {
-  return A * (1.0f - Theta) + B * Theta;
+  return A * (1.0f - Delta) + B * Delta;
 }
 
 constexpr inline f32 LerpAngle(const f32 A, const f32 B, const f32 Theta)
