@@ -4,6 +4,7 @@
     "cstddef": "cpp",
     "algorithm": "cpp",
     "cmath": "cpp",
-    "__locale": "cpp"
+    "__locale": "cpp",
+    "cstdlib": "cpp"
   }
 }
