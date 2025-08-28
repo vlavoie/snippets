@@ -1,5 +1,5 @@
 /*
-Example program to use wav.hh
+Example program to use mixer.hh
 Copyright (C) 2025  Vincent Lavoie
 
 This program is free software: you can redistribute it and/or modify
@@ -17,6 +17,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <common.hh>
+#include <mixer.hh>
 #include <pulseaudio.hh>
 #include <wav.hh>
 
@@ -29,38 +30,48 @@ static pulse_audio PulseAudio;
 
 i32 main(i32 Argc, char *Argv[])
 {
-  if (Argc < 2)
+  if (Argc < 3)
   {
-    fprintf(stdout, "WAV file argument is required to play audio.\n");
+    fprintf(stdout, "Two or more WAV files arguments are required to mix audio.\n");
     return 1;
   }
 
-  FILE *File = fopen(Argv[1], "r");
-  key WavLength = 0;
-  void *WavData = 0x0;
+  key AudioCount = Argc - 1;
+  wav::audio *Audios = SysAllocate(wav::audio, AudioCount);
+  key LongestAudio = 0;
 
-  if (File)
+  for (key AudioIndex = 0; AudioIndex < AudioCount; AudioIndex++)
   {
-    fseek(File, 0, SEEK_END);
-    WavLength = ftell(File);
-    WavData = SysAllocate(byte, WavLength);
-    rewind(File);
-    fread(WavData, 1, WavLength, File);
+    FILE *File = fopen(Argv[AudioIndex + 1], "r");
+    key WavLength = 0;
+    void *WavData = 0x0;
 
-    fclose(File);
-  }
-  else
-  {
-    fprintf(stdout, "Failed to read WAV file.\n");
-    return 1;
-  }
+    if (File)
+    {
+      fseek(File, 0, SEEK_END);
+      WavLength = ftell(File);
+      WavData = SysAllocate(byte, WavLength);
+      rewind(File);
+      fread(WavData, 1, WavLength, File);
 
-  wav::audio Wav = wav::GetAudio(WavLength, WavData);
+      fclose(File);
+    }
+    else
+    {
+      fprintf(stdout, "Failed to read WAV file.\n");
+      return 1;
+    }
 
-  if (Wav.SampleCount == 0)
-  {
-    fprintf(stdout, "Failed to parse WAV file.\n");
-    return 1;
+    Audios[AudioIndex] = wav::GetAudio(WavLength, WavData);
+
+    if (Audios[AudioIndex].SampleCount == 0)
+    {
+      fprintf(stdout, "Failed to parse WAV file '%s'.\n", Argv[AudioIndex + 1]);
+      return 1;
+    }
+
+    LongestAudio = Audios[AudioIndex].SampleCount > LongestAudio ? Audios[AudioIndex].SampleCount
+                                                                 : LongestAudio;
   }
 
   if (InitializePulseAudio(&PulseAudio) == 0)
@@ -68,12 +79,13 @@ i32 main(i32 Argc, char *Argv[])
     fprintf(stdout, "Failed to initialize PulseAudio.\n");
     return 1;
   }
-  void *StreamBuffer;
+
+  wav::sample *StreamBuffer;
 
   key WriteableBytes = pa_stream_writable_size(PulseAudio.Stream);
   key ChunkLength = WriteableBytes;
   key Offset = 0;
-  key StreamBufferLength = Wav.SampleCount * sizeof(wav::sample);
+  key StreamBufferLength = LongestAudio * sizeof(wav::sample);
 
   i32 PulseAudioError;
 
@@ -84,7 +96,8 @@ i32 main(i32 Argc, char *Argv[])
     if (WriteableBytes > 0)
     {
       ChunkLength = ChunkLength < BytesLeft ? ChunkLength : BytesLeft;
-      PulseAudioError = pa_stream_begin_write(PulseAudio.Stream, &StreamBuffer, &ChunkLength);
+      PulseAudioError =
+          pa_stream_begin_write(PulseAudio.Stream, (void **)&StreamBuffer, &ChunkLength);
 
       if (PulseAudioError < 0)
       {
@@ -99,7 +112,20 @@ i32 main(i32 Argc, char *Argv[])
                   WriteableBytes, ChunkLength, ChunkLength / sizeof(wav::sample));
         }
 
-        memcpy(StreamBuffer, Wav.SampleData + Offset, ChunkLength);
+        for (key SampleIndex = 0; SampleIndex < ChunkLength / sizeof(wav::sample); SampleIndex++)
+        {
+          mixer::sample MixedSample = 0;
+          for (key MixerIndex = 0; MixerIndex < AudioCount; MixerIndex++)
+          {
+            if (Audios[MixerIndex].SampleCount > Offset)
+            {
+              MixedSample = mixer::MixSamples(MixedSample,
+                                              Audios[MixerIndex].SampleData[SampleIndex + Offset]);
+            }
+          }
+
+          StreamBuffer[SampleIndex] = MixedSample;
+        }
 
         if (ChunkLength > 0)
         {

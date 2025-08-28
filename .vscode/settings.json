@@ -3,6 +3,7 @@
     "__node_handle": "cpp",
     "cstddef": "cpp",
     "algorithm": "cpp",
-    "cmath": "cpp"
+    "cmath": "cpp",
+    "__locale": "cpp"
   }
 }

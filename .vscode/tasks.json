@@ -20,6 +20,12 @@
       "type": "shell",
       "command": "${workspaceFolder}/examples/cartridge/compile.sh",
       "group": "build"
+    },
+    {
+      "label": "CompileMixer",
+      "type": "shell",
+      "command": "${workspaceFolder}/examples/mixer/compile.sh",
+      "group": "build"
     }
   ]
 }

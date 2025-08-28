@@ -56,6 +56,25 @@
       "MIMode": "gdb",
       "setupCommands": [],
       "preLaunchTask": "CompileCartridge"
+    },
+    {
+      "name": "DebugMixer",
+      "type": "cppdbg",
+      "request": "launch",
+      // Resolved by CMake Tools:
+      "program": "${workspaceFolder}/build/mixer_d",
+      "args": [
+        "assets/test.wav",
+        "assets/test2.wav",
+        "assets/test3.wav",
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [],
+      "preLaunchTask": "CompileMixer"
     }
   ]
 }
