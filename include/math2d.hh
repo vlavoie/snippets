@@ -684,3 +684,36 @@ constexpr inline bool32 Intersects(ray Ray, box Box)
 {
   return Intersects(Box, Ray);
 }
+
+struct matrix4
+{
+  f32 X0, Y0, Z0, W0, X1, Y1, Z1, W1, X2, Y2, Z2, W2, X3, Y3, Z3, W3;
+};
+
+inline void OrthographicMatrix(matrix4 *Matrix, f32 Width, f32 Height, f32 Left, f32 Top)
+{
+  static const f32 Far = 1.0f;
+  static const f32 Near = 0.0f;
+
+  Matrix->X0 = 2.0f / (Width - Left);
+  Matrix->Y0 = 0.0f;
+  Matrix->Z0 = 0.0f;
+  Matrix->W0 = 0.0f;
+  Matrix->X1 = 0.0f;
+  Matrix->Y1 = 2.0f / (Top - Height);
+  Matrix->Z1 = 0.0f;
+  Matrix->W1 = 0.0f;
+  Matrix->X2 = 0.0f;
+  Matrix->Y2 = 0.0f;
+  Matrix->Z2 = -2.0f / (Far - Near);
+  Matrix->W2 = 0.0f;
+  Matrix->X3 = -(Width + Left) / (Width - Left);
+  Matrix->Y3 = -(Top + Height) / (Top - Height);
+  Matrix->Z3 = -(Far + Near) / (Far - Near);
+  Matrix->W3 = 1.0f;
+}
+
+inline void OrthographicMatrix(matrix4 *Matrix, f32 Width, f32 Height)
+{
+  OrthographicMatrix(Matrix, Width, Height, 0.0f, 0.0f);
+}
