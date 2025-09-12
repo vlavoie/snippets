@@ -19,11 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #pragma once
 
 #include <common.hh>
-
-#ifndef __TGA__Allocate
-#include <stdlib.h>
-#define __TGA__Allocate(_N) malloc(_N)
-#endif
+#include "texture.hh"
 
 namespace tga
 {
@@ -36,21 +32,9 @@ enum error_code
   ERROR_CODE_PIXEL_DEPTH = 4,    // Can only handle pixel depths of 8, 16, 24, and 32
 };
 
-struct pixel
-{
-  byte R, G, B, A;
-};
-
 struct reader
 {
   byte *Offset;
-};
-
-struct texture
-{
-  u32 Width;
-  u32 Height;
-  tga::pixel *Pixels;
 };
 
 struct header
@@ -69,6 +53,6 @@ struct header
   byte ImageDescriptor;
 };
 
-tga::texture *Decompress(key Length, void *Data);
-tga::texture *Decompress(key Length, void *Data, i32 *ErrorCode);
+texture *Decompress(key Length, void *Data);
+texture *Decompress(key Length, void *Data, i32 *ErrorCode);
 }; // namespace tga

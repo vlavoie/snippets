@@ -18,6 +18,8 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include <common.hh>
 #include <tga.hh>
+#include <texture.hh>
+#include <atlas.hh>
 
 // OpenGL
 #define GL_GLEXT_PROTOTYPES
@@ -247,32 +249,48 @@ i32 main(i32 Argc, char *Argv[])
     return 1;
   }
 
-  FILE *File = fopen(Argv[1], "r");
-  key TGALength = 0;
-  void *TGAData = 0x0;
+  key TextureCount = Argc - 1;
 
-  if (File)
+  texture *Textures[1024];
+
+  for (key Index = 0; Index < TextureCount; Index++)
   {
-    fseek(File, 0, SEEK_END);
-    TGALength = ftell(File);
-    TGAData = SysAllocate(byte, TGALength);
-    rewind(File);
-    fread(TGAData, 1, TGALength, File);
+    FILE *File = fopen(Argv[Index + 1], "r");
+    key TGALength = 0;
+    void *TGAData = 0x0;
 
-    fclose(File);
+    if (File)
+    {
+      fseek(File, 0, SEEK_END);
+      TGALength = ftell(File);
+      TGAData = SysAllocate(byte, TGALength);
+      rewind(File);
+      fread(TGAData, 1, TGALength, File);
+
+      fclose(File);
+    }
+    else
+    {
+      fprintf(stdout, "Failed to read TGA file.\n");
+      return 1;
+    }
+
+    Textures[Index] = tga::Decompress(TGALength, TGAData);
+
+    if (Textures[Index] == 0x0)
+    {
+      fprintf(stdout, "Failed to parse TGA file.\n");
+      return 1;
+    }
+
+    free(TGAData);
   }
-  else
-  {
-    fprintf(stdout, "Failed to read TGA file.\n");
-    return 1;
-  }
 
-  tga::texture *Texture = tga::Decompress(TGALength, TGAData);
+  atlas::pack Atlas = atlas::CreateAtlas(2048, 2048);
 
-  if (Texture == 0x0)
+  for (key Index = 0; Index < TextureCount; Index++)
   {
-    fprintf(stdout, "Failed to parse TGA file.\n");
-    return 1;
+    InsertTexture(&Atlas, Textures[Index]);
   }
 
   // x11 state initialization
@@ -311,9 +329,9 @@ i32 main(i32 Argc, char *Argv[])
   SetWindowAttributes.event_mask = ExposureMask;
 
   WindowState.Window =
-      XCreateWindow(WindowState.Display, WindowState.Root, 0, 0, Texture->Width, Texture->Height, 0,
-                    WindowState.VisualInfo->depth, InputOutput, WindowState.VisualInfo->visual,
-                    CWColormap | CWEventMask, &SetWindowAttributes);
+      XCreateWindow(WindowState.Display, WindowState.Root, 0, 0, Atlas.Texture->Width,
+                    Atlas.Texture->Height, 0, WindowState.VisualInfo->depth, InputOutput,
+                    WindowState.VisualInfo->visual, CWColormap | CWEventMask, &SetWindowAttributes);
 
   XMapWindow(WindowState.Display, WindowState.Window);
   XStoreName(WindowState.Display, WindowState.Window, "Image Example");
@@ -333,7 +351,7 @@ i32 main(i32 Argc, char *Argv[])
   glEnable(GL_DEBUG_OUTPUT);
   glDebugMessageCallback(OpenGLMessageCallback, 0);
 
-  glViewport(0, 0, Texture->Width, Texture->Height);
+  glViewport(0, 0, Atlas.Texture->Width, Atlas.Texture->Height);
   glClearColor(0, 0, 0.1f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_BLEND);
@@ -359,8 +377,8 @@ i32 main(i32 Argc, char *Argv[])
 
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * 6, Vertices, GL_STATIC_DRAW);
 
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Texture->Width, Texture->Height, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, Texture->Pixels);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Atlas.Texture->Width, Atlas.Texture->Height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, Atlas.Texture->Pixels);
   glDrawArrays(GL_TRIANGLES, 0, 6);
   glXSwapBuffers(WindowState.Display, WindowState.Window);
 
@@ -418,8 +436,6 @@ i32 main(i32 Argc, char *Argv[])
   glDeleteVertexArrays(1, &VAO);
   glDeleteTextures(1, &TextureId);
   glDeleteProgram(ShaderId);
-
-  free(TGAData);
 
   return 0;
 }

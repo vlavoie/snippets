@@ -47,9 +47,9 @@ inline word Read16LE(tga::reader *Reader)
   return Result;
 }
 
-inline tga::pixel Read32RGBA(tga::reader *Reader)
+inline pixel Read32RGBA(tga::reader *Reader)
 {
-  tga::pixel Result = tga::pixel{
+  pixel Result = pixel{
       .R = Reader->Offset[2],
       .G = Reader->Offset[1],
       .B = Reader->Offset[0],
@@ -60,9 +60,9 @@ inline tga::pixel Read32RGBA(tga::reader *Reader)
   return Result;
 }
 
-inline tga::pixel Read24RGB(tga::reader *Reader)
+inline pixel Read24RGB(tga::reader *Reader)
 {
-  tga::pixel Result = tga::pixel{
+  pixel Result = pixel{
       .R = Reader->Offset[2],
       .G = Reader->Offset[1],
       .B = Reader->Offset[0],
@@ -73,9 +73,9 @@ inline tga::pixel Read24RGB(tga::reader *Reader)
   return Result;
 }
 
-inline tga::pixel Read16RGB(tga::reader *Reader)
+inline pixel Read16RGB(tga::reader *Reader)
 {
-  tga::pixel Result = {
+  pixel Result = {
       .R = byte((Reader->Offset[1] & 0x7c) << 1),
       .G = byte(((Reader->Offset[1] & 0x03) << 6) | ((Reader->Offset[0] & 0xe0) >> 2)),
       .B = byte((Reader->Offset[0] & 0x1f) << 3),
@@ -86,7 +86,7 @@ inline tga::pixel Read16RGB(tga::reader *Reader)
   return Result;
 }
 
-inline tga::pixel ReadColorTable(byte *Table, word Origin, word Length, byte Depth, key Index)
+inline pixel ReadColorTable(byte *Table, word Origin, word Length, byte Depth, key Index)
 {
   key DepthByteLength = Depth / 8;
   key ByteOffset = (Origin * DepthByteLength) + (Index * DepthByteLength);
@@ -102,11 +102,11 @@ inline tga::pixel ReadColorTable(byte *Table, word Origin, word Length, byte Dep
     return Read32RGBA(&TempReader);
     break;
   default:
-    return tga::pixel{0, 0, 0, 0};
+    return pixel{0, 0, 0, 0};
   };
 }
 
-inline tga::pixel ReadPixelData(tga::reader *Reader, byte Depth)
+inline pixel ReadPixelData(tga::reader *Reader, byte Depth)
 {
   switch (Depth)
   {
@@ -117,11 +117,11 @@ inline tga::pixel ReadPixelData(tga::reader *Reader, byte Depth)
   case 32:
     return Read32RGBA(Reader);
   default:
-    return tga::pixel{0, 0, 0, 0};
+    return pixel{0, 0, 0, 0};
   };
 }
 
-tga::texture *tga::Decompress(key Length, void *Data, i32 *ErrorCode)
+texture *tga::Decompress(key Length, void *Data, i32 *ErrorCode)
 {
   if (sizeof(tga::header) >= Length)
   {
@@ -181,14 +181,11 @@ tga::texture *tga::Decompress(key Length, void *Data, i32 *ErrorCode)
     return 0x0;
   }
 
-  tga::pixel PixelData;
+  pixel PixelData;
   key N = 0, I, J, RLEChunk, ColorIndex;
 
-  tga::texture *Result = (tga::texture *)__TGA__Allocate(sizeof(tga::texture));
+  texture *Result = CreateEmptyTexture(Header.Width, Header.Height);
   key DataSize = Header.Width * Header.Height;
-  Result->Width = Header.Width;
-  Result->Height = Header.Height;
-  Result->Pixels = (tga::pixel *)__TGA__Allocate(sizeof(tga::pixel) * DataSize);
 
   while (N < DataSize)
   {
@@ -263,7 +260,7 @@ tga::texture *tga::Decompress(key Length, void *Data, i32 *ErrorCode)
   return Result;
 }
 
-tga::texture *tga::Decompress(key Length, void *Data)
+texture *tga::Decompress(key Length, void *Data)
 {
   return tga::Decompress(Length, Data, 0x0);
 }
