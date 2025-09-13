@@ -282,7 +282,15 @@ i32 main(i32 Argc, char *Argv[])
     free(TGAData);
   }
 
-  atlas::pack Atlas = atlas::CreateAtlas(768, 768);
+  atlas::pack Atlas;
+  if (TextureCount > 1)
+  {
+    Atlas = atlas::CreateAtlas(768, 768);
+  }
+  else
+  {
+    Atlas = atlas::CreateAtlas(Textures[0]->Width, Textures[0]->Height);
+  }
 
   for (key Index = 0; Index < TextureCount; Index++)
   {
