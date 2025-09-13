@@ -282,22 +282,20 @@ i32 main(i32 Argc, char *Argv[])
     free(TGAData);
   }
 
-  atlas::pack Atlas;
+  atlas::pack *Atlas;
   if (TextureCount > 1)
   {
-    Atlas = atlas::CreateAtlas(768, 768);
-  }
-  else
-  {
-    Atlas = atlas::CreateAtlas(Textures[0]->Width, Textures[0]->Height);
+    Atlas = atlas::CreateAtlas(TextureCount, Textures);
+
+    for (key Index = 0; Index < Atlas->Size; Index++)
+    {
+      atlas::coordinates *Coordinates = Atlas->Coordinates + Index;
+      fprintf(stdout, "Coordinates Start.X: %f, Start.Y: %f, End.X: %f, End.Y: %f.\n",
+              Coordinates->Start.X, Coordinates->Start.Y, Coordinates->End.X, Coordinates->End.Y);
+    }
   }
 
-  for (key Index = 0; Index < TextureCount; Index++)
-  {
-    atlas::coordinates Coordinates = InsertTexture(&Atlas, Textures[Index]);
-    fprintf(stdout, "Coordinates Start.X: %f, Start.Y: %f, End.X: %f, End.Y: %f.\n",
-            Coordinates.Start.X, Coordinates.Start.Y, Coordinates.End.X, Coordinates.End.Y);
-  }
+  texture *DisplayTexture = TextureCount > 1 ? Atlas->Texture : Textures[0];
 
   // x11 state initialization
   fprintf(stdout, "Initializing x11 platform.\n");
@@ -335,8 +333,8 @@ i32 main(i32 Argc, char *Argv[])
   SetWindowAttributes.event_mask = ExposureMask;
 
   WindowState.Window =
-      XCreateWindow(WindowState.Display, WindowState.Root, 0, 0, Atlas.Texture->Width,
-                    Atlas.Texture->Height, 0, WindowState.VisualInfo->depth, InputOutput,
+      XCreateWindow(WindowState.Display, WindowState.Root, 0, 0, DisplayTexture->Width,
+                    DisplayTexture->Height, 0, WindowState.VisualInfo->depth, InputOutput,
                     WindowState.VisualInfo->visual, CWColormap | CWEventMask, &SetWindowAttributes);
 
   XMapWindow(WindowState.Display, WindowState.Window);
@@ -357,7 +355,7 @@ i32 main(i32 Argc, char *Argv[])
   glEnable(GL_DEBUG_OUTPUT);
   glDebugMessageCallback(OpenGLMessageCallback, 0);
 
-  glViewport(0, 0, Atlas.Texture->Width, Atlas.Texture->Height);
+  glViewport(0, 0, DisplayTexture->Width, DisplayTexture->Height);
   glClearColor(0, 0, 0.1f, 1.0f);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glEnable(GL_BLEND);
@@ -383,8 +381,8 @@ i32 main(i32 Argc, char *Argv[])
 
   glBufferData(GL_ARRAY_BUFFER, sizeof(vertex) * 6, Vertices, GL_STATIC_DRAW);
 
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, Atlas.Texture->Width, Atlas.Texture->Height, 0, GL_RGBA,
-               GL_UNSIGNED_BYTE, Atlas.Texture->Pixels);
+  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, DisplayTexture->Width, DisplayTexture->Height, 0, GL_RGBA,
+               GL_UNSIGNED_BYTE, DisplayTexture->Pixels);
   glDrawArrays(GL_TRIANGLES, 0, 6);
   glXSwapBuffers(WindowState.Display, WindowState.Window);
 

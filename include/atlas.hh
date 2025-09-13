@@ -24,33 +24,19 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace atlas
 {
-struct pack
-{
-  key IndexX;
-  key IndexY;
-  texture *Texture;
-};
-
 struct coordinates
 {
   vec2 Start;
   vec2 End;
 };
 
-inline atlas::pack CreateAtlas(key Width, key Height)
+struct pack
 {
-  return {
-      .IndexX = 0,
-      .IndexY = 0,
-      .Texture = CreateEmptyTexture(Width, Height),
-  };
-}
+  key Size;
 
-inline void NextRow(atlas::pack *Atlas, key Height)
-{
-  Atlas->IndexX = 0;
-  Atlas->IndexY += Height;
-}
+  atlas::coordinates *Coordinates;
+  texture *Texture;
+};
 
 inline vec2 ToCoordinates(atlas::pack *Atlas, vec2 Position)
 {
@@ -60,32 +46,56 @@ inline vec2 ToCoordinates(atlas::pack *Atlas, vec2 Position)
   };
 }
 
-inline atlas::coordinates InsertTexture(atlas::pack *Atlas, texture *Texture)
+inline atlas::pack *CreateAtlas(key TextureCount, texture **Textures)
 {
-  Assert(Texture->Width <= Atlas->Texture->Width && Texture->Height <= Atlas->Texture->Height,
-         "Texture cannot fit in atlas.");
+  atlas::pack *Result = SysAllocate(atlas::pack, 1);
+  Result->Size = TextureCount;
+  Result->Coordinates = SysAllocate(atlas::coordinates, TextureCount);
 
-  atlas::coordinates Result;
-
-  if (Atlas->IndexX + Texture->Width > Atlas->Texture->Width)
+  key TotalSize = 0;
+  for (key TextureIndex = 0; TextureIndex < TextureCount; TextureIndex++)
   {
-    NextRow(Atlas, Texture->Height);
+    texture *Texture = Textures[TextureIndex];
+    TotalSize += Texture->Width * Texture->Height;
   }
 
-  for (key Y = 0; Y < Texture->Height; Y++)
+  key PowerOfTwo = 2;
+
+  while (PowerOfTwo * PowerOfTwo < TotalSize * 2)
   {
-    for (key X = 0; X < Texture->Width; X++)
+    PowerOfTwo *= 2;
+  }
+
+  Result->Texture = CreateEmptyTexture(PowerOfTwo, PowerOfTwo);
+
+  key IndexX = 0, IndexY = 0;
+
+  for (key TextureIndex = 0; TextureIndex < TextureCount; TextureIndex++)
+  {
+    texture *Texture = Textures[TextureIndex];
+
+    if (IndexX + Texture->Width > Result->Texture->Width)
     {
-      WritePixelAt(Atlas->Texture, X + Atlas->IndexX, Y + Atlas->IndexY, GetPixel(Texture, X, Y));
+      IndexX = 0;
+      IndexY += Texture->Height;
     }
+
+    for (key Y = 0; Y < Texture->Height; Y++)
+    {
+      for (key X = 0; X < Texture->Width; X++)
+      {
+        WritePixelAt(Result->Texture, X + IndexX, Y + IndexY, GetPixel(Texture, X, Y));
+      }
+    }
+
+    Result->Coordinates[TextureIndex].Start =
+        atlas::ToCoordinates(Result, vec2{.X = f32(IndexX), .Y = f32(IndexY)});
+    Result->Coordinates[TextureIndex].End = atlas::ToCoordinates(
+        Result, vec2{.X = f32(IndexX + Texture->Width), .Y = f32(IndexY + Texture->Height)});
+
+    IndexX += Texture->Width;
   }
 
-  Result.Start =
-      atlas::ToCoordinates(Atlas, vec2{.X = f32(Atlas->IndexX), .Y = f32(Atlas->IndexY)});
-  Result.End = atlas::ToCoordinates(Atlas, vec2{.X = f32(Atlas->IndexX + Texture->Width),
-                                                .Y = f32(Atlas->IndexY + Texture->Height)});
-
-  Atlas->IndexX += Texture->Width;
   return Result;
 }
 } // namespace atlas
