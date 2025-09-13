@@ -17,9 +17,10 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
 #include <common.hh>
-#include <tga.hh>
-#include <texture.hh>
 #include <atlas.hh>
+#include <math2d.hh>
+#include <texture.hh>
+#include <tga.hh>
 
 // OpenGL
 #define GL_GLEXT_PROTOTYPES
@@ -59,11 +60,6 @@ void main() {
   gl_FragColor = texture(Texture0, FragmentCoordinate);
 }
 )";
-
-struct vec2
-{
-  f32 X, Y;
-};
 
 struct vertex
 {
@@ -286,11 +282,13 @@ i32 main(i32 Argc, char *Argv[])
     free(TGAData);
   }
 
-  atlas::pack Atlas = atlas::CreateAtlas(2048, 2048);
+  atlas::pack Atlas = atlas::CreateAtlas(768, 768);
 
   for (key Index = 0; Index < TextureCount; Index++)
   {
-    InsertTexture(&Atlas, Textures[Index]);
+    atlas::coordinates Coordinates = InsertTexture(&Atlas, Textures[Index]);
+    fprintf(stdout, "Coordinates Start.X: %f, Start.Y: %f, End.X: %f, End.Y: %f.\n",
+            Coordinates.Start.X, Coordinates.Start.Y, Coordinates.End.X, Coordinates.End.Y);
   }
 
   // x11 state initialization
