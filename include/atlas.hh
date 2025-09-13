@@ -68,7 +68,7 @@ inline atlas::pack *CreateAtlas(key TextureCount, texture **Textures)
 
   Result->Texture = CreateEmptyTexture(PowerOfTwo, PowerOfTwo);
 
-  key IndexX = 0, IndexY = 0;
+  key IndexX = 0, IndexY = 0, RowTallest = 0;
 
   for (key TextureIndex = 0; TextureIndex < TextureCount; TextureIndex++)
   {
@@ -77,7 +77,8 @@ inline atlas::pack *CreateAtlas(key TextureCount, texture **Textures)
     if (IndexX + Texture->Width > Result->Texture->Width)
     {
       IndexX = 0;
-      IndexY += Texture->Height;
+      IndexY += RowTallest;
+      RowTallest = 0;
     }
 
     for (key Y = 0; Y < Texture->Height; Y++)
@@ -93,6 +94,7 @@ inline atlas::pack *CreateAtlas(key TextureCount, texture **Textures)
     Result->Coordinates[TextureIndex].End = atlas::ToCoordinates(
         Result, vec2{.X = f32(IndexX + Texture->Width), .Y = f32(IndexY + Texture->Height)});
 
+    RowTallest = Texture->Height > RowTallest ? Texture->Height : RowTallest;
     IndexX += Texture->Width;
   }
 
