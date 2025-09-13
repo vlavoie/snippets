@@ -7,6 +7,5 @@ mkdir -p build
 
 clang++ -std=c++14 -o build/audio_d -Iinclude -Iexamples/common -Wall -lpulse -g \
   examples/audio/main.cc                                                         \
-  examples/common/pulseaudio.cc                                                  \
   include/riff.cc                                                                \
   include/wav.cc
