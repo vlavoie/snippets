@@ -52,16 +52,18 @@ inline atlas::pack *CreateAtlas(key TextureCount, texture **Textures)
   Result->Size = TextureCount;
   Result->Coordinates = SysAllocate(atlas::coordinates, TextureCount);
 
-  key TotalSize = 0;
+  key TotalSize = 0, Widest = 0, Tallest = 0;
   for (key TextureIndex = 0; TextureIndex < TextureCount; TextureIndex++)
   {
     texture *Texture = Textures[TextureIndex];
     TotalSize += Texture->Width * Texture->Height;
+    Widest = Widest < Texture->Width ? Texture->Width : Widest;
+    Tallest = Tallest < Texture->Height ? Texture->Height : Tallest;
   }
 
   key PowerOfTwo = 2;
 
-  while (PowerOfTwo * PowerOfTwo < TotalSize * 2)
+  while (PowerOfTwo * PowerOfTwo < TotalSize * 2 || PowerOfTwo < Widest || PowerOfTwo < Tallest)
   {
     PowerOfTwo *= 2;
   }
