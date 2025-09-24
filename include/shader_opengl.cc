@@ -106,3 +106,8 @@ void SetShaderUniformMatrix4(key ShaderID, const char *UniformName, matrix4 *Mat
 {
   glUniformMatrix4fv(glGetUniformLocation(ShaderID, UniformName), 1, GL_FALSE, &Matrix->X0);
 }
+
+void SetShaderSampler(key ShaderID, const char *UniformName, key SamplerID)
+{
+  SetShaderUniformInteger(ShaderID, UniformName, i32(SamplerID));
+}

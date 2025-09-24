@@ -31,3 +31,4 @@ void SetShaderUniformInteger(key ShaderID, const char *UniformName, i32 Value);
 void SetShaderUniformUnsigned(key ShaderID, const char *UniformName, u32 Value);
 void SetShaderUniformFloat(key ShaderID, const char *UniformName, f32 Value);
 void SetShaderUniformMatrix4(key ShaderID, const char *UniformName, matrix4 *Matrix);
+void SetShaderSampler(key ShaderID, const char *UniformName, key SamplerID);

@@ -103,3 +103,32 @@ constexpr inline f32 UnpackAlpha(u32 Color)
 {
   return f32(Color & 0x000000FF) / f32(U8_MAX);
 }
+
+struct rgb
+{
+  f32 R, G, B;
+};
+
+struct rgba
+{
+  f32 R, G, B, A;
+};
+
+constexpr inline rgb UnpackRGB(const color Color)
+{
+  return {
+      .R = UnpackRed(Color),
+      .G = UnpackGreen(Color),
+      .B = UnpackBlue(Color),
+  };
+}
+
+constexpr inline rgba UnpackRGBA(const color Color)
+{
+  return {
+      .R = UnpackRed(Color),
+      .G = UnpackGreen(Color),
+      .B = UnpackBlue(Color),
+      .A = UnpackAlpha(Color),
+  };
+}
