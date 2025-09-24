@@ -23,12 +23,13 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 key CompileShader(const char *const *ShaderSource, key Type);
 key CreateShaderProgram(const char *const *VsSource, const char *const *FsSource);
-void FreeShaderProgram(key ShaderID);
+void FreeShaderProgram(const key ShaderID);
 
-void UseShaderProgram(key ShaderID);
+void UseShaderProgram(const key ShaderID);
 
-void SetShaderUniformInteger(key ShaderID, const char *UniformName, i32 Value);
-void SetShaderUniformUnsigned(key ShaderID, const char *UniformName, u32 Value);
-void SetShaderUniformFloat(key ShaderID, const char *UniformName, f32 Value);
-void SetShaderUniformMatrix4(key ShaderID, const char *UniformName, matrix4 *Matrix);
-void SetShaderSampler(key ShaderID, const char *UniformName, key SamplerID);
+void SetShaderUniformInteger(const key ShaderID, const char *UniformName, const i32 Value);
+void SetShaderUniformUnsigned(const key ShaderID, const char *UniformName, const u32 Value);
+void SetShaderUniformFloat(const key ShaderID, const char *UniformName, const f32 Value);
+void SetShaderUniformMatrix4(const key ShaderID, const char *UniformName, const matrix4 *Matrix);
+void SetShaderUniformSampler(const key ShaderID, const char *UniformName, const key SamplerID);
+void SetShaderUniformColor(const key ShaderID, const char *UniformName, const color Color);

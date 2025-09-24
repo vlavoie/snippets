@@ -77,37 +77,43 @@ key CreateShaderProgram(const char *const *VertexSource, const char *const *Frag
   return ShaderProgram;
 }
 
-void FreeShaderProgram(key ShaderID)
+void FreeShaderProgram(const key ShaderID)
 {
   glDeleteProgram(ShaderID);
 }
 
-void UseShaderProgram(key ShaderID)
+void UseShaderProgram(const key ShaderID)
 {
   glUseProgram(ShaderID);
 }
 
-void SetShaderUniformInteger(key ShaderID, const char *UniformName, i32 Value)
+void SetShaderUniformInteger(const key ShaderID, const char *UniformName, const i32 Value)
 {
   glUniform1i(glGetUniformLocation(ShaderID, UniformName), Value);
 }
 
-void SetShaderUniformUnsigned(key ShaderID, const char *UniformName, u32 Value)
+void SetShaderUniformUnsigned(const key ShaderID, const char *UniformName, const u32 Value)
 {
   glUniform1ui(glGetUniformLocation(ShaderID, UniformName), Value);
 }
 
-void SetShaderUniformFloat(key ShaderID, const char *UniformName, f32 Value)
+void SetShaderUniformFloat(const key ShaderID, const char *UniformName, const f32 Value)
 {
   glUniform1f(glGetUniformLocation(ShaderID, UniformName), Value);
 }
 
-void SetShaderUniformMatrix4(key ShaderID, const char *UniformName, matrix4 *Matrix)
+void SetShaderUniformMatrix4(const key ShaderID, const char *UniformName, const matrix4 *Matrix)
 {
   glUniformMatrix4fv(glGetUniformLocation(ShaderID, UniformName), 1, GL_FALSE, &Matrix->X0);
 }
 
-void SetShaderSampler(key ShaderID, const char *UniformName, key SamplerID)
+void SetShaderUniformSampler(const key ShaderID, const char *UniformName, const key SamplerID)
 {
   SetShaderUniformInteger(ShaderID, UniformName, i32(SamplerID));
+}
+
+void SetShaderUniformColor(const key ShaderID, const char *UniformName, const color Color)
+{
+  rgba RGBA = UnpackRGBA(Color);
+  glUniform4fv(glGetUniformLocation(ShaderID, UniformName), 1, &RGBA.R);
 }
