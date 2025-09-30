@@ -654,6 +654,14 @@ constexpr inline bool32 Intersects(const box Box, const line Line)
   return Intersects(Line, Box);
 }
 
+constexpr inline box CreateBox(vec2 Origin, vec2 Dimensions)
+{
+  return {
+      .AA = Origin,
+      .BB = Origin + Dimensions,
+  };
+}
+
 constexpr inline ray CreateRay(vec2 Origin, vec2 Direction)
 {
   return {

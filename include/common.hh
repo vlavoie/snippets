@@ -78,11 +78,31 @@ typedef u64 tick;
 
 typedef u32 color;
 
+struct rgb
+{
+  f32 R, G, B;
+};
+
+struct rgba
+{
+  f32 R, G, B, A;
+};
+
 constexpr inline u32 PackColor(f32 R, f32 G, f32 B, f32 A)
 {
   return u32((u8(R * f32(U8_MAX)) << 24) | (u8(G * f32(U8_MAX)) << 16) |
              (u8(B * f32(U8_MAX)) << 8) | (u8(A * f32(U8_MAX))));
 };
+
+constexpr inline u32 PackRGBA(rgba RGBA)
+{
+  return PackColor(RGBA.R, RGBA.G, RGBA.B, RGBA.A);
+}
+
+constexpr inline u32 PackRGB(rgb RGB)
+{
+  return PackColor(RGB.R, RGB.G, RGB.B, 1.0f);
+}
 
 constexpr inline f32 UnpackRed(u32 Color)
 {
@@ -103,16 +123,6 @@ constexpr inline f32 UnpackAlpha(u32 Color)
 {
   return f32(Color & 0x000000FF) / f32(U8_MAX);
 }
-
-struct rgb
-{
-  f32 R, G, B;
-};
-
-struct rgba
-{
-  f32 R, G, B, A;
-};
 
 constexpr inline rgb UnpackRGB(const color Color)
 {
