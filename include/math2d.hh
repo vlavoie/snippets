@@ -726,3 +726,19 @@ inline void OrthographicMatrix(matrix4 *Matrix, const f32 Width, const f32 Heigh
 {
   OrthographicMatrix(Matrix, Width, Height, 0.0f, 0.0f);
 }
+
+constexpr inline f32 Clamp(const f32 Lower, const f32 Upper, const f32 Value)
+{
+  f32 Result = Maximum(Value, Lower);
+  Result = Minimum(Result, Upper);
+
+  return Result;
+}
+
+constexpr inline vec2 Clamp(const vec2 Lower, const vec2 Upper, const vec2 Value)
+{
+  vec2 Result = Maximum(Value, Lower);
+  Result = Minimum(Result, Upper);
+
+  return Result;
+}
