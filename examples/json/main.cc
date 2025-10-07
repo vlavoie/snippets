@@ -164,13 +164,34 @@ inline f32 AcceptNumber(const char *Input, input_reader *Reader)
   return Number * Scalar;
 }
 
+inline bool32 AcceptWhitespace(const char *Input, input_reader *Reader)
+{
+  return Accept(Input, Reader, ' ') || Accept(Input, Reader, '\t') || Accept(Input, Reader, '\n') ||
+         Accept(Input, Reader, '\r');
+}
+
+inline f32 AcceptValue(const char *Input, input_reader *Reader)
+{
+  while (AcceptWhitespace(Input, Reader))
+  {
+  }
+
+  f32 Value = AcceptNumber(Input, Reader);
+
+  while (AcceptWhitespace(Input, Reader))
+  {
+  }
+
+  return Value;
+}
+
 i32 main(const i32 Argc, const char *Argv[])
 {
 
   for (key Index = 1; Index < Argc; Index++)
   {
     input_reader Reader{.Offset = 0, .Error = 0};
-    f32 Number = AcceptNumber(Argv[Index], &Reader);
+    f32 Number = AcceptValue(Argv[Index], &Reader);
 
     if (Reader.Error == INPUT_READER_ERROR_NONE)
     {
