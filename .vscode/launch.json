@@ -89,7 +89,10 @@
       "request": "launch",
       "program": "${workspaceFolder}/build/json_d",
       "args": [
-        "\r\t     765          ",
+        "\r\t     true",
+        "-3.14159e2",
+        "false",
+        "\rnull",
       ],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
