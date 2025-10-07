@@ -8,7 +8,6 @@
       "name": "DebugImage",
       "type": "cppdbg",
       "request": "launch",
-      // Resolved by CMake Tools:
       "program": "${workspaceFolder}/build/image_d",
       "args": [
         "assets/atlas/1.tga",
@@ -54,7 +53,6 @@
       "name": "DebugAudio",
       "type": "cppdbg",
       "request": "launch",
-      // Resolved by CMake Tools:
       "program": "${workspaceFolder}/build/audio_d",
       "args": [
         "assets/test.wav",
@@ -71,7 +69,6 @@
       "name": "DebugCartridge",
       "type": "cppdbg",
       "request": "launch",
-      // Resolved by CMake Tools:
       "program": "${workspaceFolder}/build/cartridge_d",
       "args": [
         "assets/test.wav",
@@ -85,6 +82,26 @@
       "MIMode": "gdb",
       "setupCommands": [],
       "preLaunchTask": "CompileCartridge"
+    },
+    {
+      "name": "DebugJson",
+      "type": "cppdbg",
+      "request": "launch",
+      "program": "${workspaceFolder}/build/json_d",
+      "args": [
+        "5678",
+        "-65478",
+        "3.141596547657",
+        "-3.141596547657",
+        "6.285e2",
+      ],
+      "stopAtEntry": false,
+      "cwd": "${workspaceFolder}",
+      "environment": [],
+      "externalConsole": false,
+      "MIMode": "gdb",
+      "setupCommands": [],
+      "preLaunchTask": "CompileJson"
     }
   ]
 }

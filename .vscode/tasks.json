@@ -20,6 +20,12 @@
       "type": "shell",
       "command": "${workspaceFolder}/examples/cartridge/compile.sh",
       "group": "build"
+    },
+    {
+      "label": "CompileJson",
+      "type": "shell",
+      "command": "${workspaceFolder}/examples/json/compile.sh",
+      "group": "build"
     }
   ]
 }
