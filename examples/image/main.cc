@@ -19,6 +19,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <common.hh>
 #include <atlas.hh>
 #include <math2d.hh>
+#include <shader.hh>
 #include <texture.hh>
 #include <tga.hh>
 
@@ -172,58 +173,6 @@ void GLAPIENTRY OpenGLMessageCallback(GLenum source, GLenum Type, GLuint Id, GLe
           (Type == GL_DEBUG_TYPE_ERROR ? "** GL ERROR **" : ""), Type, Severity, Message);
 }
 
-GLuint CompileShader(const GLchar *const *ShaderSource, GLenum Type)
-{
-  GLuint ShaderId = glCreateShader(Type);
-  glShaderSource(ShaderId, 1, ShaderSource, NULL);
-  glCompileShader(ShaderId);
-
-  i32 CompileStatue;
-  glGetShaderiv(ShaderId, GL_COMPILE_STATUS, &CompileStatue);
-  if (CompileStatue)
-  {
-    fprintf(stdout, "%s Shader compiled.\n", Type == GL_FRAGMENT_SHADER ? "Fragment" : "Vertex");
-  }
-  else
-  {
-    char Buffer[4096];
-    glGetShaderInfoLog(ShaderId, 4096, NULL, Buffer);
-    fprintf(stdout, "%s Shader failed to compile: %s\n",
-            Type == GL_FRAGMENT_SHADER ? "Fragment" : "Vertex", Buffer);
-  }
-
-  return ShaderId;
-}
-
-GLuint CreateShaderProgram(const GLchar *const *VertexSource, const GLchar *const *FragmentSource)
-{
-  GLuint ShaderId = glCreateProgram();
-
-  GLuint VertexShader = CompileShader(VertexSource, GL_VERTEX_SHADER);
-  GLuint FragmentShader = CompileShader(FragmentSource, GL_FRAGMENT_SHADER);
-
-  glAttachShader(ShaderId, VertexShader);
-  glAttachShader(ShaderId, FragmentShader);
-  glLinkProgram(ShaderId);
-
-  GLint LinkingStatus;
-  glGetProgramiv(ShaderId, GL_LINK_STATUS, &LinkingStatus);
-  if (LinkingStatus)
-  {
-    fprintf(stdout, "Shader program linked.\n");
-  }
-  else
-  {
-    char Buffer[4096];
-    glGetProgramInfoLog(ShaderId, 4096, NULL, Buffer);
-    fprintf(stdout, "Shader program failed linking: %s\n", Buffer);
-  }
-
-  glDeleteShader(VertexShader);
-  glDeleteShader(FragmentShader);
-  return ShaderId;
-}
-
 i32 HandleX11Error(Display *XDisplay, XErrorEvent *XError)
 {
   char Message[256];
@@ -350,7 +299,7 @@ i32 main(i32 Argc, char *Argv[])
   WindowState.Height = WindowAttributes.height;
 
   ShaderId = CreateShaderProgram(&VERTEX_SHADER, &FRAGMENT_SHADER);
-  glUseProgram(ShaderId);
+  UseShaderProgram(ShaderId);
 
   glEnable(GL_DEBUG_OUTPUT);
   glDebugMessageCallback(OpenGLMessageCallback, 0);

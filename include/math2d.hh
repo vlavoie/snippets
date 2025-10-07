@@ -654,7 +654,15 @@ constexpr inline bool32 Intersects(const box Box, const line Line)
   return Intersects(Line, Box);
 }
 
-constexpr inline ray CreateRay(vec2 Origin, vec2 Direction)
+constexpr inline box CreateBox(const vec2 Origin, const vec2 Dimensions)
+{
+  return {
+      .AA = Origin,
+      .BB = Origin + Dimensions,
+  };
+}
+
+constexpr inline ray CreateRay(const vec2 Origin, const vec2 Direction)
 {
   return {
       .Origin = Origin,
@@ -663,7 +671,7 @@ constexpr inline ray CreateRay(vec2 Origin, vec2 Direction)
   };
 }
 
-constexpr inline bool32 Intersects(box Box, ray Ray)
+constexpr inline bool32 Intersects(const box Box, const ray Ray)
 {
   f32 TX0 = (Box.AA.X - Ray.Origin.X) * Ray.InverseDirection.X;
   f32 TX1 = (Box.BB.X - Ray.Origin.X) * Ray.InverseDirection.X;
@@ -680,7 +688,7 @@ constexpr inline bool32 Intersects(box Box, ray Ray)
   return TMax >= TMin && TMax >= 0.0f;
 }
 
-constexpr inline bool32 Intersects(ray Ray, box Box)
+constexpr inline bool32 Intersects(const ray Ray, const box Box)
 {
   return Intersects(Box, Ray);
 }
@@ -690,7 +698,8 @@ struct matrix4
   f32 X0, Y0, Z0, W0, X1, Y1, Z1, W1, X2, Y2, Z2, W2, X3, Y3, Z3, W3;
 };
 
-inline void OrthographicMatrix(matrix4 *Matrix, f32 Width, f32 Height, f32 Left, f32 Top)
+inline void OrthographicMatrix(matrix4 *Matrix, const f32 Width, const f32 Height, const f32 Left,
+                               const f32 Top)
 {
   static const f32 Far = 1.0f;
   static const f32 Near = 0.0f;
@@ -713,7 +722,23 @@ inline void OrthographicMatrix(matrix4 *Matrix, f32 Width, f32 Height, f32 Left,
   Matrix->W3 = 1.0f;
 }
 
-inline void OrthographicMatrix(matrix4 *Matrix, f32 Width, f32 Height)
+inline void OrthographicMatrix(matrix4 *Matrix, const f32 Width, const f32 Height)
 {
   OrthographicMatrix(Matrix, Width, Height, 0.0f, 0.0f);
+}
+
+constexpr inline f32 Clamp(const f32 Lower, const f32 Upper, const f32 Value)
+{
+  f32 Result = Maximum(Value, Lower);
+  Result = Minimum(Result, Upper);
+
+  return Result;
+}
+
+constexpr inline vec2 Clamp(const vec2 Lower, const vec2 Upper, const vec2 Value)
+{
+  vec2 Result = Maximum(Value, Lower);
+  Result = Minimum(Result, Upper);
+
+  return Result;
 }

@@ -32,7 +32,7 @@ struct shift_register
 
 inline shift_register CreateShiftRegister()
 {
-  return {.Seed = u32(u16(rand()) << 16) | (u16(rand()))};
+  return {.Seed = u32(u16(__RANDOM__Rand()) << 16) | (u16(__RANDOM__Rand()))};
 }
 
 inline u32 ShiftRegisterSeed(shift_register *ShiftRegister)
