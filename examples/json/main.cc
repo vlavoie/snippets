@@ -224,7 +224,7 @@ inline bool32 AcceptHex(const char *Input, input_reader *Reader)
 {
   char Head = Input[Reader->Offset];
 
-  if (Head >= '0' && Head <= '9' && Head >= 'a' && Head <= 'f' && Head >= 'A' && Head <= 'F')
+  if ((Head >= '0' && Head <= '9') || (Head >= 'a' && Head <= 'f') || (Head >= 'A' && Head <= 'F'))
   {
     Next(Input, Reader);
     return true;
@@ -251,18 +251,24 @@ json_string ParseString(const char *Input, input_reader *Reader)
   {
     if (Accept(Input, Reader, '\\'))
     {
+      Length++;
+
       if (Expect(Input, Reader, '\"') || Expect(Input, Reader, '\\') ||
           Expect(Input, Reader, '/') || Expect(Input, Reader, 'b') || Expect(Input, Reader, 'f') ||
           Expect(Input, Reader, 'n') || Expect(Input, Reader, 'r') || Expect(Input, Reader, 't'))
       {
         Next(Input, Reader);
+        Length++;
       }
       else if (Accept(Input, Reader, 'u'))
       {
+        Length++;
+
         for (key Index = 0; Index < 4; Index++)
         {
           if (AcceptHex(Input, Reader))
           {
+            Length++;
           }
           else
           {
@@ -280,14 +286,13 @@ json_string ParseString(const char *Input, input_reader *Reader)
     else if (!Accept(Input, Reader, '\"'))
     {
       Next(Input, Reader);
+      Length++;
     }
     else if (Accept(Input, Reader, '\0'))
     {
       Reader->Error = INPUT_READER_ERROR_PARSING;
       return {.Length = 0, .Buffer = 0x0};
     }
-
-    Length++;
   }
 
   json_string Result;
@@ -412,7 +417,7 @@ i32 main(const i32 Argc, const char *Argv[])
 
   Reader = {.Offset = 0, .Error = 0};
 
-  json_string String = ParseValue("\"A string\"", &Reader).String;
+  json_string String = ParseValue("\"A \\u2346\\bstring\"", &Reader).String;
 
   if (Reader.Error == INPUT_READER_ERROR_NONE)
   {
