@@ -88,12 +88,7 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/json_d",
-      "args": [
-        "\r\t     true",
-        "-3.14159e2",
-        "false",
-        "\rnull",
-      ],
+      "args": [],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],
