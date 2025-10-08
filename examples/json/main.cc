@@ -15,11 +15,20 @@ struct json_string
   char *Buffer;
 };
 
+union json_value;
+
+struct json_array
+{
+  key Length;
+  json_value *Values;
+};
+
 union json_value {
   f32 Number;
   bool32 Boolean;
   bool32 Null;
   json_string String;
+  json_array Array;
 };
 
 #define JSON_NULL_VALUE INT32_MAX
@@ -184,11 +193,17 @@ f32 ParseNumber(const char *Input, input_reader *Reader)
   return Number * Scalar;
 }
 
-bool32 ParseWhitespace(const char *Input, input_reader *Reader)
+bool32 AcceptWhitespace(const char *Input, input_reader *Reader)
 {
-  return Accept(Input, Reader, ' ') || Accept(Input, Reader, 0x0020) ||
+  bool32 Whitespace = false;
+  while (Accept(Input, Reader, ' ') || Accept(Input, Reader, 0x0020) ||
          Accept(Input, Reader, 0x000A) || Accept(Input, Reader, 0x000D) ||
-         Accept(Input, Reader, 0x0009);
+         Accept(Input, Reader, 0x0009))
+  {
+    Whitespace = true;
+  }
+
+  return Whitespace;
 }
 
 bool32 ParseBoolean(const char *Input, input_reader *Reader)
@@ -307,6 +322,8 @@ json_string ParseString(const char *Input, input_reader *Reader)
   return Result;
 }
 
+json_array ParseArray(const char *Input, input_reader *Reader);
+
 json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
 {
   json_value Value;
@@ -338,6 +355,9 @@ json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
   case '\"':
     Value.String = ParseString(Input, Reader);
     break;
+  case '[':
+    Value.Array = ParseArray(Input, Reader);
+    break;
   default:
     Reader->Error = INPUT_READER_ERROR_PARSING;
     break;
@@ -348,17 +368,86 @@ json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
 
 json_value ParseValue(const char *Input, input_reader *Reader)
 {
-  while (ParseWhitespace(Input, Reader))
-  {
-  }
-
+  AcceptWhitespace(Input, Reader);
   json_value Value = ParseTrimmedValue(Input, Reader);
-
-  while (ParseWhitespace(Input, Reader))
-  {
-  }
+  AcceptWhitespace(Input, Reader);
 
   return Value;
+}
+
+json_array ParseArray(const char *Input, input_reader *Reader)
+{
+  if (Accept(Input, Reader, '['))
+  {
+  }
+  else
+  {
+    Reader->Error = INPUT_READER_ERROR_PARSING;
+    return {
+        .Length = 0,
+        .Values = 0x0,
+    };
+  }
+
+  AcceptWhitespace(Input, Reader);
+  bool32 FirstLoop = true;
+
+  json_array Result;
+  Result.Length = 0;
+
+  input_reader Backtrack;
+  Backtrack.Offset = Reader->Offset;
+  Backtrack.Error = Reader->Error;
+
+  while (!Accept(Input, &Backtrack, ']'))
+  {
+    if (FirstLoop)
+    {
+    }
+    else if (Accept(Input, &Backtrack, ','))
+    {
+    }
+    else
+    {
+      Backtrack.Error = INPUT_READER_ERROR_PARSING;
+      return {
+          .Length = 0,
+          .Values = 0x0,
+      };
+    }
+
+    ParseValue(Input, &Backtrack);
+    AcceptWhitespace(Input, &Backtrack);
+
+    Result.Length++;
+    FirstLoop = false;
+  }
+
+  Result.Values = SysAllocate(json_value, Result.Length);
+  key Index = 0;
+  FirstLoop = true;
+
+  while (!Accept(Input, Reader, ']'))
+  {
+    if (FirstLoop)
+    {
+    }
+    else if (Accept(Input, Reader, ','))
+    {
+    }
+    else
+    {
+      Reader->Error = INPUT_READER_ERROR_PARSING;
+    }
+
+    Result.Values[Index] = ParseValue(Input, Reader);
+    AcceptWhitespace(Input, Reader);
+
+    Index++;
+    FirstLoop = false;
+  }
+
+  return Result;
 }
 
 i32 main(const i32 Argc, const char *Argv[])
@@ -427,5 +516,20 @@ i32 main(const i32 Argc, const char *Argv[])
   {
     printf("Failed to parse string.\n");
   }
+
+  Reader = {.Offset = 0, .Error = 0};
+
+  json_array Array = ParseValue("[123, [], \"A string\", true, null]", &Reader).Array;
+
+  if (Reader.Error == INPUT_READER_ERROR_NONE)
+  {
+    printf("Successfully parsed array: %f, %s\n", Array.Values[0].Number,
+           Array.Values[2].String.Buffer);
+  }
+  else
+  {
+    printf("Failed to parse array.\n");
+  }
+
   return 0;
 }
