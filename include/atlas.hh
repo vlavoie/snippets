@@ -38,7 +38,7 @@ struct pack
   texture *Texture;
 };
 
-inline vec2 ToCoordinates(atlas::pack *Atlas, vec2 Position)
+inline vec2 ToCoordinates(const atlas::pack *Atlas, const vec2 Position)
 {
   return {
       .X = Position.X / f32(Atlas->Texture->Width),
@@ -46,7 +46,7 @@ inline vec2 ToCoordinates(atlas::pack *Atlas, vec2 Position)
   };
 }
 
-inline atlas::pack *CreateAtlas(key TextureCount, texture **Textures)
+inline atlas::pack *CreateAtlas(const key TextureCount, const texture **Textures)
 {
   atlas::pack *Result = SysAllocate(atlas::pack, 1);
   Result->Size = TextureCount;
@@ -55,7 +55,7 @@ inline atlas::pack *CreateAtlas(key TextureCount, texture **Textures)
   key TotalSize = 0, Widest = 0, Tallest = 0;
   for (key TextureIndex = 0; TextureIndex < TextureCount; TextureIndex++)
   {
-    texture *Texture = Textures[TextureIndex];
+    const texture *Texture = Textures[TextureIndex];
     TotalSize += Texture->Width * Texture->Height;
     Widest = Widest < Texture->Width ? Texture->Width : Widest;
     Tallest = Tallest < Texture->Height ? Texture->Height : Tallest;
@@ -74,7 +74,7 @@ inline atlas::pack *CreateAtlas(key TextureCount, texture **Textures)
 
   for (key TextureIndex = 0; TextureIndex < TextureCount; TextureIndex++)
   {
-    texture *Texture = Textures[TextureIndex];
+    const texture *Texture = Textures[TextureIndex];
 
     if (IndexX + Texture->Width > Result->Texture->Width)
     {

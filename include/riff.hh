@@ -54,21 +54,21 @@ constexpr inline riff::iterator ZeroIterator()
   };
 }
 
-constexpr inline bool32 IsRiffChunk(riff::chunk *Chunk)
+constexpr inline bool32 IsRiffChunk(const riff::chunk *Chunk)
 {
   return Chunk->ChunkID == riff::FORMAT_TYPE;
 };
 
-constexpr inline bool32 EndOfChunk(riff::iterator Iterator)
+constexpr inline bool32 EndOfChunk(const riff::iterator Iterator)
 {
   return Iterator.Current >= Iterator.End;
 }
 
-riff::chunk *GetChunk(key Length, void *Data);
-riff::iterator GetIterator(riff::chunk *Chunk);
-riff::iterator GetIteratorByID(riff::chunk *Chunk, u32 ID);
-riff::iterator NextSubChunk(riff::iterator Iterator);
-u32 GetChunkID(riff::iterator Iterator);
-u32 GetChunkSize(riff::iterator Iterator);
-void *GetChunkData(riff::iterator Iterator);
+riff::chunk *GetChunk(const key Length, const void *Data);
+riff::iterator GetIterator(const riff::chunk *Chunk);
+riff::iterator GetIteratorByID(const riff::chunk *Chunk, const u32 ID);
+riff::iterator NextSubChunk(const riff::iterator Iterator);
+u32 GetChunkID(const riff::iterator Iterator);
+u32 GetChunkSize(const riff::iterator Iterator);
+void *GetChunkData(const riff::iterator Iterator);
 } // namespace riff

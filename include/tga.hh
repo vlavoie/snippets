@@ -34,7 +34,7 @@ enum error_code
 
 struct reader
 {
-  byte *Offset;
+  const byte *Offset;
 };
 
 struct header
@@ -53,6 +53,6 @@ struct header
   byte ImageDescriptor;
 };
 
-texture *Decompress(key Length, void *Data);
-texture *Decompress(key Length, void *Data, i32 *ErrorCode);
+texture *Decompress(const key Length, const void *Data);
+texture *Decompress(const key Length, const void *Data, i32 *ErrorCode);
 }; // namespace tga

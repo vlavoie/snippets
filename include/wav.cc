@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "wav.hh"
 
-riff::chunk *wav::GetChunk(key Length, void *Data)
+riff::chunk *wav::GetChunk(const key Length, const void *Data)
 {
   riff::chunk *RiffChunk = riff::GetChunk(Length, Data);
 
@@ -35,7 +35,7 @@ riff::chunk *wav::GetChunk(key Length, void *Data)
   return RiffChunk;
 }
 
-wav::format *wav::GetFormat(key Length, void *Data)
+wav::format *wav::GetFormat(const key Length, const void *Data)
 {
   riff::chunk *Chunk = wav::GetChunk(Length, Data);
 
@@ -54,7 +54,7 @@ wav::format *wav::GetFormat(key Length, void *Data)
   return (wav::format *)riff::GetChunkData(Iterator);
 }
 
-wav::audio wav::GetAudio(key Length, void *Data)
+wav::audio wav::GetAudio(const key Length, const void *Data)
 {
   riff::chunk *Chunk = wav::GetChunk(Length, Data);
 

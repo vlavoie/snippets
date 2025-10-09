@@ -27,7 +27,8 @@ namespace mixer
 {
 typedef short sample;
 
-constexpr inline mixer::sample MixSamples(mixer::sample LeftSample, mixer::sample RightSample)
+constexpr inline mixer::sample MixSamples(const mixer::sample LeftSample,
+                                          const mixer::sample RightSample)
 {
   // Taken from Viktor T. Toth formula for mixing PCM audio
   // http://www.vttoth.com/CMS/index.php/technical-notes/68

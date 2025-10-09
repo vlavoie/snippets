@@ -18,7 +18,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 #include "riff.hh"
 
-riff::chunk *riff::GetChunk(key Length, void *Data)
+riff::chunk *riff::GetChunk(const key Length, const void *Data)
 {
   if (Length < sizeof(riff::chunk))
   {
@@ -35,7 +35,7 @@ riff::chunk *riff::GetChunk(key Length, void *Data)
   return 0x0;
 }
 
-riff::iterator riff::GetIterator(riff::chunk *Chunk)
+riff::iterator riff::GetIterator(const riff::chunk *Chunk)
 {
   byte *ChunkData = ((byte *)Chunk) + sizeof(riff::chunk);
   riff::iterator Iterator = {
@@ -46,7 +46,7 @@ riff::iterator riff::GetIterator(riff::chunk *Chunk)
   return Iterator;
 }
 
-riff::iterator riff::NextSubChunk(riff::iterator Iterator)
+riff::iterator riff::NextSubChunk(const riff::iterator Iterator)
 {
   riff::sub_chunk *SubChunk = (riff::sub_chunk *)Iterator.Current;
   u32 Size = (SubChunk->ChunkSize + 1) & ~1;
@@ -57,24 +57,24 @@ riff::iterator riff::NextSubChunk(riff::iterator Iterator)
   };
 }
 
-u32 riff::GetChunkID(riff::iterator Iterator)
+u32 riff::GetChunkID(const riff::iterator Iterator)
 {
   riff::sub_chunk *SubChunk = (riff::sub_chunk *)Iterator.Current;
   return SubChunk->ChunkID;
 }
 
-u32 riff::GetChunkSize(riff::iterator Iterator)
+u32 riff::GetChunkSize(const riff::iterator Iterator)
 {
   riff::sub_chunk *SubChunk = (riff::sub_chunk *)Iterator.Current;
   return SubChunk->ChunkSize;
 }
 
-void *riff::GetChunkData(riff::iterator Iterator)
+void *riff::GetChunkData(const riff::iterator Iterator)
 {
   return Iterator.Current + sizeof(riff::sub_chunk);
 }
 
-riff::iterator riff::GetIteratorByID(riff::chunk *Chunk, u32 ID)
+riff::iterator riff::GetIteratorByID(const riff::chunk *Chunk, const u32 ID)
 {
   riff::iterator Iterator = riff::GetIterator(Chunk);
 

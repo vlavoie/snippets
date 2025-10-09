@@ -196,7 +196,7 @@ i32 main(i32 Argc, char *Argv[])
 
   key TextureCount = Argc - 1;
 
-  texture *Textures[1024];
+  const texture *Textures[1024];
 
   for (key Index = 0; Index < TextureCount; Index++)
   {
@@ -231,7 +231,7 @@ i32 main(i32 Argc, char *Argv[])
     free(TGAData);
   }
 
-  atlas::pack *Atlas;
+  const atlas::pack *Atlas;
   if (TextureCount > 1)
   {
     Atlas = atlas::CreateAtlas(TextureCount, Textures);
@@ -244,7 +244,7 @@ i32 main(i32 Argc, char *Argv[])
     }
   }
 
-  texture *DisplayTexture = TextureCount > 1 ? Atlas->Texture : Textures[0];
+  const texture *DisplayTexture = TextureCount > 1 ? Atlas->Texture : Textures[0];
 
   // x11 state initialization
   fprintf(stdout, "Initializing x11 platform.\n");

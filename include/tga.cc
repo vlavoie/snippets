@@ -86,7 +86,8 @@ inline pixel Read16RGB(tga::reader *Reader)
   return Result;
 }
 
-inline pixel ReadColorTable(byte *Table, word Origin, word Length, byte Depth, key Index)
+inline pixel ReadColorTable(const byte *Table, const word Origin, const word Length,
+                            const byte Depth, const key Index)
 {
   key DepthByteLength = Depth / 8;
   key ByteOffset = (Origin * DepthByteLength) + (Index * DepthByteLength);
@@ -106,7 +107,7 @@ inline pixel ReadColorTable(byte *Table, word Origin, word Length, byte Depth, k
   };
 }
 
-inline pixel ReadPixelData(tga::reader *Reader, byte Depth)
+inline pixel ReadPixelData(tga::reader *Reader, const byte Depth)
 {
   switch (Depth)
   {
@@ -121,7 +122,7 @@ inline pixel ReadPixelData(tga::reader *Reader, byte Depth)
   };
 }
 
-texture *tga::Decompress(key Length, void *Data, i32 *ErrorCode)
+texture *tga::Decompress(const key Length, const void *Data, i32 *ErrorCode)
 {
   if (sizeof(tga::header) >= Length)
   {
@@ -150,7 +151,7 @@ texture *tga::Decompress(key Length, void *Data, i32 *ErrorCode)
 
   Reader.Offset += Header.IdLength;
 
-  byte *ColorMapData = Reader.Offset;
+  const byte *ColorMapData = Reader.Offset;
   Reader.Offset += Header.ColorMapType * Header.ColorMapLength * (Header.ColorMapDepth / 8);
 
   if (!(Header.DataTypeCode == 1 || Header.DataTypeCode == 2 || Header.DataTypeCode == 10))
@@ -260,7 +261,7 @@ texture *tga::Decompress(key Length, void *Data, i32 *ErrorCode)
   return Result;
 }
 
-texture *tga::Decompress(key Length, void *Data)
+texture *tga::Decompress(const key Length, const void *Data)
 {
   return tga::Decompress(Length, Data, 0x0);
 }

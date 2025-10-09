@@ -55,17 +55,17 @@ struct audio
   wav::data *SampleData;
 };
 
-constexpr inline bool32 IsWaveFormatType(riff::chunk *Chunk)
+constexpr inline bool32 IsWaveFormatType(const riff::chunk *Chunk)
 {
   return Chunk->FormatType == wav::CHUNKID_WAVE;
 }
 
-constexpr inline bool32 IsFormatChunk(riff::sub_chunk *SubChunk)
+constexpr inline bool32 IsFormatChunk(const riff::sub_chunk *SubChunk)
 {
   return SubChunk->ChunkID == wav::CHUNKID_FORMAT;
 }
 
-constexpr inline bool32 IsDataChunk(riff::sub_chunk *SubChunk)
+constexpr inline bool32 IsDataChunk(const riff::sub_chunk *SubChunk)
 {
   return SubChunk->ChunkID == wav::CHUNKID_DATA;
 }
@@ -78,7 +78,7 @@ constexpr inline wav::audio ZeroAudio()
   };
 }
 
-riff::chunk *GetChunk(key Length, void *Data);
-wav::format *GetFormat(key Length, void *Data);
-wav::audio GetAudio(key Length, void *Data);
+riff::chunk *GetChunk(const key Length, const void *Data);
+wav::format *GetFormat(const key Length, const void *Data);
+wav::audio GetAudio(const key Length, const void *Data);
 } // namespace wav

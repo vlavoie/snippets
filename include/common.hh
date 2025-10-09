@@ -94,32 +94,32 @@ constexpr inline u32 PackColor(f32 R, f32 G, f32 B, f32 A)
              (u8(B * f32(U8_MAX)) << 8) | (u8(A * f32(U8_MAX))));
 };
 
-constexpr inline u32 PackRGBA(rgba RGBA)
+constexpr inline u32 PackRGBA(const rgba RGBA)
 {
   return PackColor(RGBA.R, RGBA.G, RGBA.B, RGBA.A);
 }
 
-constexpr inline u32 PackRGB(rgb RGB)
+constexpr inline u32 PackRGB(const rgb RGB)
 {
   return PackColor(RGB.R, RGB.G, RGB.B, 1.0f);
 }
 
-constexpr inline f32 UnpackRed(u32 Color)
+constexpr inline f32 UnpackRed(const u32 Color)
 {
   return f32((Color & 0xFF000000) >> 24) / f32(U8_MAX);
 }
 
-constexpr inline f32 UnpackGreen(u32 Color)
+constexpr inline f32 UnpackGreen(const u32 Color)
 {
   return f32((Color & 0x00FF0000) >> 16) / f32(U8_MAX);
 }
 
-constexpr inline f32 UnpackBlue(u32 Color)
+constexpr inline f32 UnpackBlue(const u32 Color)
 {
   return f32((Color & 0x0000FF00) >> 8) / f32(U8_MAX);
 }
 
-constexpr inline f32 UnpackAlpha(u32 Color)
+constexpr inline f32 UnpackAlpha(const u32 Color)
 {
   return f32(Color & 0x000000FF) / f32(U8_MAX);
 }
