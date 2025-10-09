@@ -22,6 +22,7 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 namespace hash
 {
+typedef u64 digest;
 // SOURCE: taken from stb_ds
 // Copyright (c) 2019 Sean Barrett
 // Permission is hereby granted, free of charge, to any person obtaining a copy of
@@ -45,9 +46,9 @@ namespace hash
 #define __HASH__ROTATE_RIGHT(val, n) (((val) >> (n)) | ((val) << (__HASH__SIZE_T_BITS - (n))))
 
 // Thomas Wang 64 bit to 32 bit
-constexpr inline u64 Mix(const u64 Seed, const u32 Value)
+constexpr inline hash::digest Mix(const hash::digest Seed, const u32 Value)
 {
-  u64 Result = Value;
+  hash::digest Result = Value;
   Result ^= Seed;
   Result = (~Result) + (Result << 18);
   Result ^= Result ^ __HASH__ROTATE_RIGHT(Result, 31);
@@ -58,14 +59,14 @@ constexpr inline u64 Mix(const u64 Seed, const u32 Value)
   return Result + Seed;
 }
 
-constexpr inline u64 Mix(const u32 Value)
+constexpr inline hash::digest Mix(const u32 Value)
 {
   return hash::Mix(__HASH__DEFAULT_SEED, Value);
 }
 
-inline u64 Mix(const u64 Seed, const char *String)
+constexpr inline hash::digest Mix(const hash::digest Seed, const char *String)
 {
-  u64 Result = Seed;
+  hash::digest Result = Seed;
   while (*String)
   {
     Result = __HASH__ROTATE_LEFT(Result, 9) + (unsigned char)*String++;
@@ -74,18 +75,35 @@ inline u64 Mix(const u64 Seed, const char *String)
   return hash::Mix(Result) + Seed;
 }
 
-inline u64 Mix(const char *String)
+constexpr inline hash::digest Mix(const hash::digest Seed, const char *String, const key Length)
+{
+  hash::digest Result = Seed;
+
+  for (key CharIndex = 0; CharIndex < Length; CharIndex++)
+  {
+    Result = __HASH__ROTATE_LEFT(Result, 9) + (unsigned char)String[CharIndex];
+  }
+
+  return hash::Mix(Result) + Seed;
+}
+
+constexpr inline hash::digest Mix(const char *String)
 {
   return hash::Mix(__HASH__DEFAULT_SEED, String);
 }
+
+constexpr inline hash::digest Mix(const char *String, const key Length)
+{
+  return hash::Mix(__HASH__DEFAULT_SEED, String, Length);
+}
 /////////// End of stb_ds code ///////////
 
-constexpr inline u64 CantorPair(const u32 X, const u32 Y)
+constexpr inline hash::digest CantorPair(const u32 X, const u32 Y)
 {
   return (X + Y) * (X + Y + 1) / 2 + Y;
 }
 
-constexpr inline u64 CantorPairSigned(const i32 X, const i32 Y)
+constexpr inline hash::digest CantorPairSigned(const i32 X, const i32 Y)
 {
   u32 A = X >= 0 ? 2 * X : -2 * X - 1;
   u32 B = Y >= 0 ? 2 * Y : -2 * Y - 1;
@@ -93,12 +111,12 @@ constexpr inline u64 CantorPairSigned(const i32 X, const i32 Y)
   return hash::CantorPair(A, B);
 }
 
-constexpr inline u64 SzudzikPair(const u32 X, const u32 Y)
+constexpr inline hash::digest SzudzikPair(const u32 X, const u32 Y)
 {
   return X >= Y ? (X * X) + X + Y : (Y * Y) + X;
 }
 
-constexpr inline u64 SzudzikPairSigned(const i32 X, const i32 Y)
+constexpr inline hash::digest SzudzikPairSigned(const i32 X, const i32 Y)
 {
   u32 A = X >= 0 ? 2 * X : -2 * X - 1;
   u32 B = Y >= 0 ? 2 * Y : -2 * Y - 1;

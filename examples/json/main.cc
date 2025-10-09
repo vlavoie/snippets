@@ -1,4 +1,23 @@
+/*
+WIP json parser, this will leak a lot of memory do not use as is
+Copyright (C) 2025  Vincent Lavoie
+
+This program is free software: you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation, either version 3 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License
+along with this program.  If not, see <https://www.gnu.org/licenses/>.
+*/
+
 #include <common.hh>
+#include <hash.hh>
 #include <math2d.hh>
 
 #include <cstdio>
@@ -23,12 +42,20 @@ struct json_array
   json_value *Values;
 };
 
+struct json_object
+{
+  key Capacity;
+  key Count;
+  json_value *Values;
+};
+
 union json_value {
   f32 Number;
   bool32 Boolean;
   bool32 Null;
   json_string String;
   json_array Array;
+  json_object Object;
 };
 
 #define JSON_NULL_VALUE INT32_MAX
@@ -84,6 +111,17 @@ inline bool32 Expect(const char *Input, input_reader *Reader, const char Lower, 
 
   if (Value >= Lower && Value <= Upper)
   {
+    return true;
+  }
+
+  return false;
+}
+
+inline bool32 AnyExcept(const char *Input, input_reader *Reader, const char Exception)
+{
+  if (Input[Reader->Offset] != Exception)
+  {
+    Next(Input, Reader);
     return true;
   }
 
@@ -248,7 +286,13 @@ inline bool32 AcceptHex(const char *Input, input_reader *Reader)
   return false;
 }
 
-json_string ParseString(const char *Input, input_reader *Reader)
+struct json_raw_string
+{
+  const key Length;
+  const char *String;
+};
+
+json_raw_string AcceptString(const char *Input, input_reader *Reader)
 {
   if (Accept(Input, Reader, '\"'))
   {
@@ -256,11 +300,11 @@ json_string ParseString(const char *Input, input_reader *Reader)
   else
   {
     Reader->Error = INPUT_READER_ERROR_PARSING;
-    return {.Length = 0, .Buffer = 0x0};
+    return {.Length = 0, .String = 0x0};
   }
 
+  const char *StringStart = Input + Reader->Offset;
   key Length = 0;
-  key StartIndex = Reader->Offset;
 
   while (!Accept(Input, Reader, '\"'))
   {
@@ -288,41 +332,56 @@ json_string ParseString(const char *Input, input_reader *Reader)
           else
           {
             Reader->Error = INPUT_READER_ERROR_PARSING;
-            return {.Length = 0, .Buffer = 0x0};
+            return {.Length = 0, .String = 0x0};
           }
         }
       }
       else
       {
         Reader->Error = INPUT_READER_ERROR_PARSING;
-        return {.Length = 0, .Buffer = 0x0};
+        return {.Length = 0, .String = 0x0};
       }
     }
-    else if (!Accept(Input, Reader, '\"'))
+    else if (AnyExcept(Input, Reader, '\"'))
     {
-      Next(Input, Reader);
       Length++;
     }
     else if (Accept(Input, Reader, '\0'))
     {
       Reader->Error = INPUT_READER_ERROR_PARSING;
-      return {.Length = 0, .Buffer = 0x0};
+      return {.Length = 0, .String = 0x0};
     }
   }
 
-  json_string Result;
-  Result.Length = Length;
-  Result.Buffer = SysAllocate(char, Length);
+  return {.Length = Length, .String = StringStart};
+}
 
-  for (key CharIndex = 0; CharIndex < Length; CharIndex++)
+json_string ParseString(const char *Input, input_reader *Reader)
+{
+  json_raw_string RawString = AcceptString(Input, Reader);
+
+  if (Reader->Error != INPUT_READER_ERROR_NONE)
   {
-    Result.Buffer[CharIndex] = Input[StartIndex + CharIndex];
+    return {
+        .Length = 0,
+        .Buffer = 0x0,
+    };
+  }
+
+  json_string Result;
+  Result.Length = RawString.Length;
+  Result.Buffer = SysAllocate(char, RawString.Length);
+
+  for (key CharIndex = 0; CharIndex < RawString.Length; CharIndex++)
+  {
+    Result.Buffer[CharIndex] = RawString.String[CharIndex];
   }
 
   return Result;
 }
 
 json_array ParseArray(const char *Input, input_reader *Reader);
+json_object ParseObject(const char *Input, input_reader *Reader);
 
 json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
 {
@@ -357,6 +416,9 @@ json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
     break;
   case '[':
     Value.Array = ParseArray(Input, Reader);
+    break;
+  case '{':
+    Value.Object = ParseObject(Input, Reader);
     break;
   default:
     Reader->Error = INPUT_READER_ERROR_PARSING;
@@ -450,6 +512,108 @@ json_array ParseArray(const char *Input, input_reader *Reader)
   return Result;
 }
 
+json_object ParseObject(const char *Input, input_reader *Reader)
+{
+  if (Accept(Input, Reader, '{'))
+  {
+  }
+  else
+  {
+    Reader->Error = INPUT_READER_ERROR_PARSING;
+    return {
+        .Capacity = 0,
+        .Count = 0,
+        .Values = 0x0,
+    };
+  }
+
+  input_reader Backtrack;
+  Backtrack.Offset = Reader->Offset;
+  Backtrack.Error = Reader->Error;
+
+  bool32 FirstLoop = true;
+  key ObjectCount = 0;
+
+  while (!Accept(Input, &Backtrack, '}'))
+  {
+    if (FirstLoop)
+    {
+    }
+    else if (Accept(Input, &Backtrack, ','))
+    {
+    }
+    else
+    {
+      Reader->Error = INPUT_READER_ERROR_PARSING;
+      return {
+          .Capacity = 0,
+          .Count = 0,
+          .Values = 0x0,
+      };
+    }
+
+    AcceptWhitespace(Input, &Backtrack);
+    AcceptString(Input, &Backtrack);
+    AcceptWhitespace(Input, &Backtrack);
+
+    Accept(Input, &Backtrack, ':');
+    ParseValue(Input, &Backtrack);
+    ObjectCount++;
+    FirstLoop = false;
+  }
+
+  if (Backtrack.Error != INPUT_READER_ERROR_NONE)
+  {
+    Reader->Error = INPUT_READER_ERROR_PARSING;
+    return {
+        .Capacity = 0,
+        .Count = 0,
+        .Values = 0x0,
+    };
+  }
+
+  FirstLoop = true;
+  json_object Result;
+  Result.Count = ObjectCount;
+  Result.Capacity = key(f32(ObjectCount) * 1.5f);
+  Result.Values = SysAllocate(json_value, Result.Capacity);
+
+  while (!Accept(Input, Reader, '}'))
+  {
+    if (FirstLoop)
+    {
+    }
+    else if (Accept(Input, Reader, ','))
+    {
+    }
+    else
+    {
+      Reader->Error = INPUT_READER_ERROR_PARSING;
+    }
+
+    AcceptWhitespace(Input, Reader);
+    json_raw_string RawString = AcceptString(Input, Reader);
+    hash::digest Digest = hash::Mix(RawString.String, RawString.Length);
+    AcceptWhitespace(Input, Reader);
+
+    Accept(Input, Reader, ':');
+    Result.Values[Digest % Result.Capacity] = ParseValue(Input, Reader);
+
+    if (Reader->Error != INPUT_READER_ERROR_NONE)
+    {
+      return {
+          .Capacity = 0,
+          .Count = 0,
+          .Values = 0x0,
+      };
+    }
+
+    FirstLoop = false;
+  }
+
+  return Result;
+}
+
 i32 main(const i32 Argc, const char *Argv[])
 {
   input_reader Reader = {.Offset = 0, .Error = 0};
@@ -529,6 +693,25 @@ i32 main(const i32 Argc, const char *Argv[])
   else
   {
     printf("Failed to parse array.\n");
+  }
+
+  Reader = {.Offset = 0, .Error = 0};
+
+  json_object Object = ParseValue("{ \"First\": [123, 1.45], \"Another\": false, \"A number\" : "
+                                  "456, \"SubObject\": { \"A property\": \"substring\"}}",
+                                  &Reader)
+                           .Object;
+
+  if (Reader.Error == INPUT_READER_ERROR_NONE)
+  {
+    json_object *SubObject = &Object.Values[hash::Mix("SubObject") % Object.Capacity].Object;
+    printf("Successfully parsed object: %f, %s\n",
+           Object.Values[hash::Mix("A number") % Object.Capacity].Number,
+           SubObject->Values[hash::Mix("A property") % SubObject->Capacity].String.Buffer);
+  }
+  else
+  {
+    printf("Failed to parse object.\n");
   }
 
   return 0;

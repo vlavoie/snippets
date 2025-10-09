@@ -31,7 +31,7 @@ struct texture
   pixel *Pixels;
 };
 
-inline texture *CreateEmptyTexture(key Width, key Height)
+inline texture *CreateEmptyTexture(const key Width, const key Height)
 {
   texture *Result = SysAllocate(texture, 1);
   Result->Width = Width;
@@ -40,19 +40,19 @@ inline texture *CreateEmptyTexture(key Width, key Height)
   return Result;
 };
 
-constexpr inline pixel *PixelAt(texture *Texture, key X, key Y)
+inline pixel *PixelAt(texture *Texture, const key X, const key Y)
 {
   Assert(Texture->Width > X && Texture->Height > Y, "Pixel index was out of range.");
   return &Texture->Pixels[Texture->Width * Y + X];
 }
 
-constexpr inline pixel GetPixel(texture *Texture, key X, key Y)
+inline pixel GetPixel(const texture *Texture, const key X, const key Y)
 {
   Assert(Texture->Width > X && Texture->Height > Y, "Pixel index was out of range.");
   return Texture->Pixels[Texture->Width * Y + X];
 }
 
-constexpr inline void WritePixelAt(texture *Texture, key X, key Y, pixel R)
+inline void WritePixelAt(texture *Texture, const key X, const key Y, const pixel R)
 {
   pixel *Pixel = PixelAt(Texture, X, Y);
   Pixel->R = R.R;
