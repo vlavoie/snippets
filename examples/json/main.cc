@@ -42,12 +42,7 @@ struct json_array
   json_value *Values;
 };
 
-struct json_object
-{
-  key Capacity;
-  key Count;
-  json_value *Values;
-};
+struct json_object;
 
 union json_value {
   f32 Number;
@@ -55,7 +50,20 @@ union json_value {
   bool32 Null;
   json_string String;
   json_array Array;
-  json_object Object;
+  json_object *Object;
+};
+
+struct json_object_slot
+{
+  hash::digest Hash;
+  json_value Value;
+};
+
+struct json_object
+{
+  key Capacity;
+  key Count;
+  json_object_slot *Slots;
 };
 
 #define JSON_NULL_VALUE INT32_MAX
@@ -370,7 +378,8 @@ json_string ParseString(const char *Input, input_reader *Reader)
 
   json_string Result;
   Result.Length = RawString.Length;
-  Result.Buffer = SysAllocate(char, RawString.Length);
+  Result.Buffer = SysAllocate(char, RawString.Length + 1);
+  Result.Buffer[RawString.Length] = '\0';
 
   for (key CharIndex = 0; CharIndex < RawString.Length; CharIndex++)
   {
@@ -381,7 +390,7 @@ json_string ParseString(const char *Input, input_reader *Reader)
 }
 
 json_array ParseArray(const char *Input, input_reader *Reader);
-json_object ParseObject(const char *Input, input_reader *Reader);
+json_object *ParseObject(const char *Input, input_reader *Reader);
 
 json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
 {
@@ -512,7 +521,41 @@ json_array ParseArray(const char *Input, input_reader *Reader)
   return Result;
 }
 
-json_object ParseObject(const char *Input, input_reader *Reader)
+inline json_object_slot *GetSlot(const json_object *JsonObject, const hash::digest Hash)
+{
+  key Index = Hash % JsonObject->Capacity;
+  key Attempts = 0;
+
+  json_object_slot *Slot = &JsonObject->Slots[Index];
+
+  while (Slot->Hash != Hash)
+  {
+    Assert(Attempts < JsonObject->Capacity, "Could not acquire slot in JsonObject hashmap.");
+    Attempts++;
+    Index = (Index + 1) % JsonObject->Capacity;
+    Slot = &JsonObject->Slots[Index];
+  }
+
+  return Slot;
+}
+
+inline json_object_slot *AssignEmptySlot(const json_object *JsonObject,
+                                         const json_raw_string *RawString)
+{
+  hash::digest Hash = hash::Mix(RawString->String, RawString->Length);
+  json_object_slot *Slot = GetSlot(JsonObject, 0);
+  Slot->Hash = Hash;
+
+  return Slot;
+}
+
+inline json_object_slot *GetSlot(const json_object *JsonObject, const char *StringKey)
+{
+  hash::digest Hash = hash::Mix(StringKey);
+  return GetSlot(JsonObject, Hash);
+}
+
+json_object *ParseObject(const char *Input, input_reader *Reader)
 {
   if (Accept(Input, Reader, '{'))
   {
@@ -520,11 +563,7 @@ json_object ParseObject(const char *Input, input_reader *Reader)
   else
   {
     Reader->Error = INPUT_READER_ERROR_PARSING;
-    return {
-        .Capacity = 0,
-        .Count = 0,
-        .Values = 0x0,
-    };
+    return 0x0;
   }
 
   input_reader Backtrack;
@@ -545,11 +584,7 @@ json_object ParseObject(const char *Input, input_reader *Reader)
     else
     {
       Reader->Error = INPUT_READER_ERROR_PARSING;
-      return {
-          .Capacity = 0,
-          .Count = 0,
-          .Values = 0x0,
-      };
+      return 0x0;
     }
 
     AcceptWhitespace(Input, &Backtrack);
@@ -565,18 +600,14 @@ json_object ParseObject(const char *Input, input_reader *Reader)
   if (Backtrack.Error != INPUT_READER_ERROR_NONE)
   {
     Reader->Error = INPUT_READER_ERROR_PARSING;
-    return {
-        .Capacity = 0,
-        .Count = 0,
-        .Values = 0x0,
-    };
+    return 0x0;
   }
 
   FirstLoop = true;
-  json_object Result;
-  Result.Count = ObjectCount;
-  Result.Capacity = key(f32(ObjectCount) * 1.5f);
-  Result.Values = SysAllocate(json_value, Result.Capacity);
+  json_object *Result = SysAllocate(json_object, 1);
+  Result->Count = ObjectCount;
+  Result->Capacity = key(f32(ObjectCount) * 1.5f); // Reduce risk of collisions
+  Result->Slots = SysAllocate(json_object_slot, Result->Capacity);
 
   while (!Accept(Input, Reader, '}'))
   {
@@ -593,19 +624,15 @@ json_object ParseObject(const char *Input, input_reader *Reader)
 
     AcceptWhitespace(Input, Reader);
     json_raw_string RawString = AcceptString(Input, Reader);
-    hash::digest Digest = hash::Mix(RawString.String, RawString.Length);
     AcceptWhitespace(Input, Reader);
 
     Accept(Input, Reader, ':');
-    Result.Values[Digest % Result.Capacity] = ParseValue(Input, Reader);
+    json_object_slot *Slot = AssignEmptySlot(Result, &RawString);
+    Slot->Value = ParseValue(Input, Reader);
 
     if (Reader->Error != INPUT_READER_ERROR_NONE)
     {
-      return {
-          .Capacity = 0,
-          .Count = 0,
-          .Values = 0x0,
-      };
+      return Result;
     }
 
     FirstLoop = false;
@@ -697,17 +724,18 @@ i32 main(const i32 Argc, const char *Argv[])
 
   Reader = {.Offset = 0, .Error = 0};
 
-  json_object Object = ParseValue("{ \"First\": [123, 1.45], \"Another\": false, \"A number\" : "
-                                  "456, \"SubObject\": { \"A property\": \"substring\"}}",
-                                  &Reader)
-                           .Object;
+  json_object *Object = ParseValue("{ \"First\": [123, 1.45], \"Another\": false, \"A number\" : "
+                                   "456, \"SubObject\": { \"A property\": \"substring\"}}",
+                                   &Reader)
+                            .Object;
 
   if (Reader.Error == INPUT_READER_ERROR_NONE)
   {
-    json_object *SubObject = &Object.Values[hash::Mix("SubObject") % Object.Capacity].Object;
-    printf("Successfully parsed object: %f, %s\n",
-           Object.Values[hash::Mix("A number") % Object.Capacity].Number,
-           SubObject->Values[hash::Mix("A property") % SubObject->Capacity].String.Buffer);
+    json_object *SubObject = GetSlot(Object, "SubObject")->Value.Object;
+    f32 ObjectNumber = GetSlot(Object, "A number")->Value.Number;
+    json_string ObjectString = GetSlot(SubObject, "A property")->Value.String;
+
+    printf("Successfully parsed object: %f, %s\n", ObjectNumber, ObjectString.Buffer);
   }
   else
   {
