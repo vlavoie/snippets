@@ -37,11 +37,12 @@ struct json_string
 };
 
 union json_value;
+struct json_value_header;
 
 struct json_array
 {
   key Length;
-  json_value *Values;
+  json_value_header *Values;
 };
 
 struct json_object;
@@ -50,15 +51,21 @@ union json_value {
   f32 Number;
   bool32 Boolean;
   bool32 Null;
-  json_string String;
-  json_array Array;
+  json_string *String;
+  json_array *Array;
   json_object *Object;
+};
+
+struct json_value_header
+{
+  key Type;
+  json_value Value;
 };
 
 struct json_object_slot
 {
   hash::digest Hash;
-  json_value Value;
+  json_value_header Header;
 };
 
 struct json_object
@@ -86,14 +93,7 @@ enum json_value_type
   JSON_VALUE_TYPE_OBJECT = 6,
 };
 
-struct json_value_header
-{
-  key Type;
-  json_value Value;
-};
-
 #define JSON_NULL_VALUE INT32_MAX
-#define JSON_ALLOCATION_SIZE (MEGABYTE)
 
 enum input_reader_error
 {
@@ -383,29 +383,35 @@ json_raw_string AcceptString(input_reader *Reader)
   return {.Length = Length, .String = StringStart};
 }
 
-template <typename T> json_string ParseString(T *Allocator, input_reader *Reader)
+template <typename A> json_string *ParseString(A *Allocator, input_reader *Reader)
 {
   json_raw_string RawString = AcceptString(Reader);
 
   if (HasFlag(Reader->Error, INPUT_READER_ERROR_PARSING))
   {
-    return {
-        .Length = 0,
-        .Buffer = 0x0,
-    };
+    return 0x0;
   }
 
-  json_string Result;
-  Result.Length = RawString.Length;
-  Result.Buffer = AllocateN(Allocator, char, RawString.Length + 1);
+  json_string *Result = Allocate(Allocator, json_string);
 
-  if (Result.Buffer)
+  if (Result)
   {
-    Result.Buffer[RawString.Length] = '\0';
+    Result->Length = RawString.Length;
+    Result->Buffer = AllocateN(Allocator, char, RawString.Length + 1);
+  }
+  else
+  {
+    AllocateN(Allocator, char, RawString.Length + 1);
+    SetFlag(&Reader->Error, INPUT_READER_ERROR_ALLOCATION);
+  }
+
+  if (Result && Result->Buffer)
+  {
+    Result->Buffer[RawString.Length] = '\0';
 
     for (key CharIndex = 0; CharIndex < RawString.Length; CharIndex++)
     {
-      Result.Buffer[CharIndex] = RawString.String[CharIndex];
+      Result->Buffer[CharIndex] = RawString.String[CharIndex];
     }
   }
   else
@@ -416,12 +422,12 @@ template <typename T> json_string ParseString(T *Allocator, input_reader *Reader
   return Result;
 }
 
-template <typename T> json_array ParseArray(T *Allocator, input_reader *Reader);
-template <typename T> json_object *ParseObject(T *Allocator, input_reader *Reader);
+template <typename A> json_array *ParseArray(A *Allocator, input_reader *Reader);
+template <typename A> json_object *ParseObject(A *Allocator, input_reader *Reader);
 
-template <typename T> json_value ParseTrimmedValue(T *Allocator, input_reader *Reader)
+template <typename A> json_value_header ParseTrimmedValue(A *Allocator, input_reader *Reader)
 {
-  json_value Value;
+  json_value_header Header;
 
   char Match = Reader->Input[Reader->Offset];
 
@@ -438,42 +444,48 @@ template <typename T> json_value ParseTrimmedValue(T *Allocator, input_reader *R
   case '8':
   case '9':
   case '-':
-    Value.Number = ParseNumber(Reader);
+    Header.Type = JSON_VALUE_TYPE_NUMBER;
+    Header.Value.Number = ParseNumber(Reader);
     break;
   case 'n':
-    Value.Null = ParseNull(Reader);
+    Header.Type = JSON_VALUE_TYPE_NULL;
+    Header.Value.Null = ParseNull(Reader);
     break;
   case 't':
   case 'f':
-    Value.Boolean = ParseBoolean(Reader);
+    Header.Type = JSON_VALUE_TYPE_BOOLEAN;
+    Header.Value.Boolean = ParseBoolean(Reader);
     break;
   case '\"':
-    Value.String = ParseString(Allocator, Reader);
+    Header.Type = JSON_VALUE_TYPE_STRING;
+    Header.Value.String = ParseString(Allocator, Reader);
     break;
   case '[':
-    Value.Array = ParseArray(Allocator, Reader);
+    Header.Type = JSON_VALUE_TYPE_ARRAY;
+    Header.Value.Array = ParseArray(Allocator, Reader);
     break;
   case '{':
-    Value.Object = ParseObject(Allocator, Reader);
+    Header.Type = JSON_VALUE_TYPE_OBJECT;
+    Header.Value.Object = ParseObject(Allocator, Reader);
     break;
   default:
     SetFlag(&Reader->Error, INPUT_READER_ERROR_PARSING);
     break;
   }
 
-  return Value;
+  return Header;
 }
 
-template <typename T> json_value ParseValue(T *Allocator, input_reader *Reader)
+template <typename A> json_value_header ParseValue(A *Allocator, input_reader *Reader)
 {
   AcceptWhitespace(Reader);
-  json_value Value = ParseTrimmedValue(Allocator, Reader);
+  json_value_header Value = ParseTrimmedValue(Allocator, Reader);
   AcceptWhitespace(Reader);
 
   return Value;
 }
 
-template <typename T> json_array ParseArray(T *Allocator, input_reader *Reader)
+template <typename A> json_array *ParseArray(A *Allocator, input_reader *Reader)
 {
   if (Accept(Reader, '['))
   {
@@ -481,22 +493,28 @@ template <typename T> json_array ParseArray(T *Allocator, input_reader *Reader)
   else
   {
     SetFlag(&Reader->Error, INPUT_READER_ERROR_PARSING);
-    return {
-        .Length = 0,
-        .Values = 0x0,
-    };
+    return 0x0;
   }
 
   AcceptWhitespace(Reader);
   bool32 FirstLoop = true;
 
-  json_array Result;
-  Result.Length = 0;
+  json_array *Result = Allocate(Allocator, json_array);
+
+  if (Result)
+  {
+    Result->Length = 0;
+  }
+  else
+  {
+    SetFlag(&Reader->Error, INPUT_READER_ERROR_ALLOCATION);
+  }
 
   input_reader Backtrack;
   Backtrack.Input = Reader->Input;
   Backtrack.Offset = Reader->Offset;
   Backtrack.Error = Reader->Error;
+  key ValuesLength = 0;
 
   while (!Accept(&Backtrack, ']'))
   {
@@ -509,20 +527,26 @@ template <typename T> json_array ParseArray(T *Allocator, input_reader *Reader)
     else
     {
       SetFlag(&Backtrack.Error, INPUT_READER_ERROR_PARSING);
-      return {
-          .Length = 0,
-          .Values = 0x0,
-      };
+      return 0x0;
     }
 
     ParseValue(Allocator, &Backtrack);
     AcceptWhitespace(&Backtrack);
 
-    Result.Length++;
+    ValuesLength++;
     FirstLoop = false;
   }
 
-  Result.Values = AllocateN(Allocator, json_value, Result.Length);
+  if (Result)
+  {
+    Result->Length = ValuesLength;
+    Result->Values = AllocateN(Allocator, json_value_header, ValuesLength);
+  }
+  else
+  {
+    AllocateN(Allocator, json_value_header, ValuesLength);
+  }
+
   key Index = 0;
   FirstLoop = true;
 
@@ -539,9 +563,9 @@ template <typename T> json_array ParseArray(T *Allocator, input_reader *Reader)
       SetFlag(&Reader->Error, INPUT_READER_ERROR_PARSING);
     }
 
-    if (Result.Values)
+    if (Result && Result->Values)
     {
-      Result.Values[Index] = ParseValue(Allocator, Reader);
+      Result->Values[Index] = ParseValue(Allocator, Reader);
     }
     else
     {
@@ -591,7 +615,7 @@ inline json_object_slot *GetSlot(const json_object *JsonObject, const char *Stri
   return GetSlot(JsonObject, Hash);
 }
 
-template <typename T> json_object *ParseObject(T *Allocator, input_reader *Reader)
+template <typename A> json_object *ParseObject(A *Allocator, input_reader *Reader)
 {
   if (Accept(Reader, '{'))
   {
@@ -677,7 +701,7 @@ template <typename T> json_object *ParseObject(T *Allocator, input_reader *Reade
     if (Result && Result->Slots)
     {
       json_object_slot *Slot = AssignEmptySlot(Result, &RawString);
-      Slot->Value = ParseValue(Allocator, Reader);
+      Slot->Header = ParseValue(Allocator, Reader);
     }
     else
     {
@@ -696,6 +720,124 @@ template <typename T> json_object *ParseObject(T *Allocator, input_reader *Reade
   return Result;
 }
 
+json_value_header *JsonGetValue(const json_object *Object, const char *FieldName)
+{
+  json_object_slot *Slot = GetSlot(Object, FieldName);
+  return &Slot->Header;
+}
+
+f32 JsonGetNumber(const json_object *Object, const char *FieldName)
+{
+  json_object_slot *Slot = GetSlot(Object, FieldName);
+  Assert(Slot->Header.Type == JSON_VALUE_TYPE_NUMBER, "Json field was not a number.");
+
+  return Slot->Header.Value.Number;
+}
+
+bool32 JsonGetBoolean(const json_object *Object, const char *FieldName)
+{
+  json_object_slot *Slot = GetSlot(Object, FieldName);
+  Assert(Slot->Header.Type == JSON_VALUE_TYPE_BOOLEAN, "Json field was not a boolean.");
+
+  return Slot->Header.Value.Boolean;
+}
+
+bool32 JsonGetNull(const json_object *Object, const char *FieldName)
+{
+  json_object_slot *Slot = GetSlot(Object, FieldName);
+  Assert(Slot->Header.Type == JSON_VALUE_TYPE_NULL, "Json field was not a null value.");
+
+  return Slot->Header.Value.Null;
+}
+
+json_string *JsonGetString(const json_object *Object, const char *FieldName)
+{
+  json_object_slot *Slot = GetSlot(Object, FieldName);
+  Assert(Slot->Header.Type == JSON_VALUE_TYPE_STRING, "Json field was not a string.");
+
+  return Slot->Header.Value.String;
+}
+
+json_array *JsonGetArray(const json_object *Object, const char *FieldName)
+{
+  json_object_slot *Slot = GetSlot(Object, FieldName);
+  Assert(Slot->Header.Type == JSON_VALUE_TYPE_ARRAY, "Json field was not an array.");
+
+  return Slot->Header.Value.Array;
+}
+
+json_object *JsonGetObject(const json_object *Object, const char *FieldName)
+{
+  json_object_slot *Slot = GetSlot(Object, FieldName);
+  Assert(Slot->Header.Type == JSON_VALUE_TYPE_OBJECT, "Json field was not a number.");
+
+  return Slot->Header.Value.Object;
+}
+
+inline json_value_header *JsonArrayGet(const json_array *Array, const key Index)
+{
+  Assert(Index < Array->Length, "Array Index was out of bounds.");
+  return &Array->Values[Index];
+}
+
+json_value_header *JsonGetValue(const json_array *Array, const key Index)
+{
+  return JsonArrayGet(Array, Index);
+}
+
+f32 JsonGetNumber(const json_array *Array, const key Index)
+{
+  json_value_header *Header = JsonArrayGet(Array, Index);
+  Assert(Header->Type == JSON_VALUE_TYPE_NUMBER, "Json field was not a number.");
+
+  return Header->Value.Number;
+}
+
+bool32 JsonGetBoolean(const json_array *Array, const key Index)
+{
+  json_value_header *Header = JsonArrayGet(Array, Index);
+  Assert(Header->Type == JSON_VALUE_TYPE_BOOLEAN, "Json field was not a boolean.");
+
+  return Header->Value.Boolean;
+}
+
+bool32 JsonGetNull(const json_array *Array, const key Index)
+{
+  json_value_header *Header = JsonArrayGet(Array, Index);
+  Assert(Header->Type == JSON_VALUE_TYPE_NULL, "Json field was not a null value.");
+
+  return Header->Value.Null;
+}
+
+json_string *JsonGetString(const json_array *Array, const key Index)
+{
+  json_value_header *Header = JsonArrayGet(Array, Index);
+  Assert(Header->Type == JSON_VALUE_TYPE_STRING, "Json field was not a string.");
+
+  return Header->Value.String;
+}
+
+json_array *JsonGetArray(const json_array *Array, const key Index)
+{
+  json_value_header *Header = JsonArrayGet(Array, Index);
+  Assert(Header->Type == JSON_VALUE_TYPE_ARRAY, "Json field was not an array.");
+
+  return Header->Value.Array;
+}
+
+json_object *JsonGetObject(const json_array *Array, const key Index)
+{
+  json_value_header *Header = JsonArrayGet(Array, Index);
+  Assert(Header->Type == JSON_VALUE_TYPE_OBJECT, "Json field was not a number.");
+
+  return Header->Value.Object;
+}
+
+template <typename A> json_object *JsonParse(A *Allocator, input_reader *Reader)
+{
+  return ParseObject(Allocator, Reader);
+}
+
 i32 main(const i32 Argc, const char *Argv[])
 {
   input_reader Reader = {
@@ -707,7 +849,7 @@ i32 main(const i32 Argc, const char *Argv[])
 
   allocator::fake *FakeAllocator = allocator::CreateFake();
 
-  ParseValue(FakeAllocator, &Reader);
+  JsonParse(FakeAllocator, &Reader);
   const key AllocationSize = allocator::MemoryUsed(FakeAllocator);
 
   allocator::Destroy(FakeAllocator);
@@ -721,17 +863,18 @@ i32 main(const i32 Argc, const char *Argv[])
   Reader.Offset = 0;
   Reader.Error = 0;
   allocator::bump *Allocator = allocator::CreateBump(AllocationSize);
-  json_object *Object = ParseValue(Allocator, &Reader).Object;
+  json_object *Object = JsonParse(Allocator, &Reader);
 
   if (Reader.Error == INPUT_READER_ERROR_NONE)
   {
-    json_object *SubObject = GetSlot(Object, "SubObject")->Value.Object;
-    f32 Number = GetSlot(Object, "A number")->Value.Number;
-    json_string SubObjectString = GetSlot(SubObject, "A property")->Value.String;
-    json_array Array = GetSlot(Object, "First")->Value.Array;
+    json_object *SubObject = JsonGetObject(Object, "SubObject");
+    f32 Number = JsonGetNumber(Object, "A number");
+    json_string *SubObjectString = JsonGetString(SubObject, "A property");
+    json_array *Array = JsonGetArray(Object, "First");
+    f32 ArrayNumber = JsonGetNumber(Array, 0);
 
-    printf("Successfully parsed object: %f, %s, %f\n", Number, SubObjectString.Buffer,
-           Array.Values[0].Number);
+    printf("Successfully parsed object: %f, %s, %f\n", Number, SubObjectString->Buffer,
+           ArrayNumber);
   }
   else
   {
