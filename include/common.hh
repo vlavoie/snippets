@@ -29,6 +29,15 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #endif
 //
 
+#define BYTE 1
+#define KILOBYTE (BYTE * 1024)
+#define MEGABYTE (KILOBYTE * 1024)
+#define GIGABYTE (MEGABYTE * 1024)
+
+#define Allocate(_Block, _Type) (_Type *)allocator::_Allocate(_Block, alignof(_Type), sizeof(_Type))
+#define AllocateN(_Block, _Type, _Length)                                                          \
+  (_Type *)allocator::_Allocate(_Block, alignof(_Type), sizeof(_Type) * _Length)
+
 typedef int8_t i8;
 typedef int16_t i16;
 typedef int32_t i32;

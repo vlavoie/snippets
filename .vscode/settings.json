@@ -5,6 +5,7 @@
     "algorithm": "cpp",
     "cmath": "cpp",
     "__locale": "cpp",
-    "cstdlib": "cpp"
+    "cstdlib": "cpp",
+    "cstdio": "cpp"
   }
 }

@@ -1,5 +1,5 @@
 /*
-WIP json parser, this will leak a lot of memory do not use as is
+WIP json parser, do not use as is
 Copyright (C) 2025  Vincent Lavoie
 
 This program is free software: you can redistribute it and/or modify
@@ -19,13 +19,14 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #include <common.hh>
 #include <hash.hh>
 #include <math2d.hh>
+#include <allocators/bump.hh>
 
 #include <cstdio>
 
-struct input_reader
+struct json_raw_string
 {
-  key Offset;
-  key Error;
+  const key Length;
+  const char *String;
 };
 
 struct json_string
@@ -66,7 +67,32 @@ struct json_object
   json_object_slot *Slots;
 };
 
+struct input_reader
+{
+  key Offset;
+  key Error;
+  const char *Input;
+};
+
+enum json_value_type
+{
+  JSON_VALUE_TYPE_INVALID = 0,
+  JSON_VALUE_TYPE_NUMBER = 1,
+  JSON_VALUE_TYPE_BOOLEAN = 2,
+  JSON_VALUE_TYPE_NULL = 3,
+  JSON_VALUE_TYPE_STRING = 4,
+  JSON_VALUE_TYPE_ARRAY = 5,
+  JSON_VALUE_TYPE_OBJECT = 6,
+};
+
+struct json_value_header
+{
+  key Type;
+  json_value Value;
+};
+
 #define JSON_NULL_VALUE INT32_MAX
+#define JSON_ALLOCATION_SIZE (MEGABYTE)
 
 enum input_reader_error
 {
@@ -74,38 +100,38 @@ enum input_reader_error
   INPUT_READER_ERROR_PARSING = 1,
 };
 
-inline char Next(const char *Input, input_reader *Reader)
+inline char Next(input_reader *Reader)
 {
-  return Input[Reader->Offset++];
+  return Reader->Input[Reader->Offset++];
 }
 
-inline bool32 Accept(const char *Input, input_reader *Reader, const char Expected)
+inline bool32 Accept(input_reader *Reader, const char Expected)
 {
-  if (Input[Reader->Offset] == Expected)
+  if (Reader->Input[Reader->Offset] == Expected)
   {
-    Next(Input, Reader);
+    Next(Reader);
     return true;
   }
 
   return false;
 }
 
-inline bool32 Accept(const char *Input, input_reader *Reader, const char Lower, const char Upper)
+inline bool32 Accept(input_reader *Reader, const char Lower, const char Upper)
 {
-  char Value = Input[Reader->Offset];
+  char Value = Reader->Input[Reader->Offset];
 
   if (Value >= Lower && Value <= Upper)
   {
-    Next(Input, Reader);
+    Next(Reader);
     return true;
   }
 
   return false;
 }
 
-inline bool32 Expect(const char *Input, input_reader *Reader, const char Expected)
+inline bool32 Expect(input_reader *Reader, const char Expected)
 {
-  if (Input[Reader->Offset] == Expected)
+  if (Reader->Input[Reader->Offset] == Expected)
   {
     return true;
   }
@@ -113,9 +139,9 @@ inline bool32 Expect(const char *Input, input_reader *Reader, const char Expecte
   return false;
 }
 
-inline bool32 Expect(const char *Input, input_reader *Reader, const char Lower, const char Upper)
+inline bool32 Expect(input_reader *Reader, const char Lower, const char Upper)
 {
-  char Value = Input[Reader->Offset];
+  char Value = Reader->Input[Reader->Offset];
 
   if (Value >= Lower && Value <= Upper)
   {
@@ -125,33 +151,33 @@ inline bool32 Expect(const char *Input, input_reader *Reader, const char Lower, 
   return false;
 }
 
-inline bool32 AnyExcept(const char *Input, input_reader *Reader, const char Exception)
+inline bool32 AnyExcept(input_reader *Reader, const char Exception)
 {
-  if (Input[Reader->Offset] != Exception)
+  if (Reader->Input[Reader->Offset] != Exception)
   {
-    Next(Input, Reader);
+    Next(Reader);
     return true;
   }
 
   return false;
 }
 
-inline char Peek(const char *Input, input_reader *Reader)
+inline char Peek(input_reader *Reader)
 {
-  return Input[Reader->Offset];
+  return Reader->Input[Reader->Offset];
 }
 
-i32 ParseDigit(const char *Input, input_reader *Reader)
+i32 ParseDigit(input_reader *Reader)
 {
   i32 StartIndex = Reader->Offset;
 
-  if (!Accept(Input, Reader, '0', '9'))
+  if (!Accept(Reader, '0', '9'))
   {
     Reader->Error = INPUT_READER_ERROR_PARSING;
     return 0;
   }
 
-  while (Accept(Input, Reader, '0', '9'))
+  while (Accept(Reader, '0', '9'))
   {
   }
 
@@ -160,24 +186,24 @@ i32 ParseDigit(const char *Input, input_reader *Reader)
 
   for (i32 Index = Reader->Offset - 1; Index >= StartIndex; Index--)
   {
-    Digit += (Input[Index] - '0') * Scalar;
+    Digit += (Reader->Input[Index] - '0') * Scalar;
     Scalar *= 10;
   }
 
   return Digit;
 }
 
-f32 ParseFraction(const char *Input, input_reader *Reader)
+f32 ParseFraction(input_reader *Reader)
 {
   i32 StartIndex = Reader->Offset;
 
-  if (!Accept(Input, Reader, '0', '9'))
+  if (!Accept(Reader, '0', '9'))
   {
     Reader->Error = INPUT_READER_ERROR_PARSING;
     return 0;
   }
 
-  while (Accept(Input, Reader, '0', '9'))
+  while (Accept(Reader, '0', '9'))
   {
   }
 
@@ -186,29 +212,29 @@ f32 ParseFraction(const char *Input, input_reader *Reader)
 
   for (i32 Index = StartIndex; Index < Reader->Offset; Index++)
   {
-    Fraction += f32(Input[Index] - '0') * Scalar;
+    Fraction += f32(Reader->Input[Index] - '0') * Scalar;
     Scalar *= 0.1f;
   }
 
   return Fraction;
 }
 
-f32 ParseNumber(const char *Input, input_reader *Reader)
+f32 ParseNumber(input_reader *Reader)
 {
   f32 Number = 0.0f;
   f32 Scalar = 1.0f;
 
-  if (Accept(Input, Reader, '-'))
+  if (Accept(Reader, '-'))
   {
     Scalar *= -1.0f;
   }
 
-  if (Accept(Input, Reader, '0'))
+  if (Accept(Reader, '0'))
   {
   }
-  else if (Expect(Input, Reader, '1', '9'))
+  else if (Expect(Reader, '1', '9'))
   {
-    Number += f32(ParseDigit(Input, Reader));
+    Number += f32(ParseDigit(Reader));
   }
   else
   {
@@ -216,35 +242,34 @@ f32 ParseNumber(const char *Input, input_reader *Reader)
     return 0.0f;
   }
 
-  if (Accept(Input, Reader, '.'))
+  if (Accept(Reader, '.'))
   {
-    Number += ParseFraction(Input, Reader);
+    Number += ParseFraction(Reader);
   }
 
-  if (Accept(Input, Reader, 'e') || Accept(Input, Reader, 'E'))
+  if (Accept(Reader, 'e') || Accept(Reader, 'E'))
   {
     f32 ExponentScalar = 1.0f;
 
-    if (Accept(Input, Reader, '-'))
+    if (Accept(Reader, '-'))
     {
       ExponentScalar *= -1.0f;
     }
-    else if (Accept(Input, Reader, '+'))
+    else if (Accept(Reader, '+'))
     {
     }
 
-    Number = Pow(Number, ParseDigit(Input, Reader) * ExponentScalar);
+    Number = Pow(Number, ParseDigit(Reader) * ExponentScalar);
   }
 
   return Number * Scalar;
 }
 
-bool32 AcceptWhitespace(const char *Input, input_reader *Reader)
+bool32 AcceptWhitespace(input_reader *Reader)
 {
   bool32 Whitespace = false;
-  while (Accept(Input, Reader, ' ') || Accept(Input, Reader, 0x0020) ||
-         Accept(Input, Reader, 0x000A) || Accept(Input, Reader, 0x000D) ||
-         Accept(Input, Reader, 0x0009))
+  while (Accept(Reader, ' ') || Accept(Reader, 0x0020) || Accept(Reader, 0x000A) ||
+         Accept(Reader, 0x000D) || Accept(Reader, 0x0009))
   {
     Whitespace = true;
   }
@@ -252,15 +277,14 @@ bool32 AcceptWhitespace(const char *Input, input_reader *Reader)
   return Whitespace;
 }
 
-bool32 ParseBoolean(const char *Input, input_reader *Reader)
+bool32 ParseBoolean(input_reader *Reader)
 {
-  if (Accept(Input, Reader, 't') && Accept(Input, Reader, 'r') && Accept(Input, Reader, 'u') &&
-      Accept(Input, Reader, 'e'))
+  if (Accept(Reader, 't') && Accept(Reader, 'r') && Accept(Reader, 'u') && Accept(Reader, 'e'))
   {
     return true;
   }
-  else if (Accept(Input, Reader, 'f') && Accept(Input, Reader, 'a') && Accept(Input, Reader, 'l') &&
-           Accept(Input, Reader, 's') && Accept(Input, Reader, 'e'))
+  else if (Accept(Reader, 'f') && Accept(Reader, 'a') && Accept(Reader, 'l') &&
+           Accept(Reader, 's') && Accept(Reader, 'e'))
   {
     return false;
   }
@@ -269,10 +293,9 @@ bool32 ParseBoolean(const char *Input, input_reader *Reader)
   return false;
 }
 
-bool32 ParseNull(const char *Input, input_reader *Reader)
+bool32 ParseNull(input_reader *Reader)
 {
-  if (Accept(Input, Reader, 'n') && Accept(Input, Reader, 'u') && Accept(Input, Reader, 'l') &&
-      Accept(Input, Reader, 'l'))
+  if (Accept(Reader, 'n') && Accept(Reader, 'u') && Accept(Reader, 'l') && Accept(Reader, 'l'))
   {
     return JSON_NULL_VALUE;
   }
@@ -281,28 +304,22 @@ bool32 ParseNull(const char *Input, input_reader *Reader)
   return 0;
 }
 
-inline bool32 AcceptHex(const char *Input, input_reader *Reader)
+inline bool32 AcceptHex(input_reader *Reader)
 {
-  char Head = Input[Reader->Offset];
+  char Head = Reader->Input[Reader->Offset];
 
   if ((Head >= '0' && Head <= '9') || (Head >= 'a' && Head <= 'f') || (Head >= 'A' && Head <= 'F'))
   {
-    Next(Input, Reader);
+    Next(Reader);
     return true;
   }
 
   return false;
 }
 
-struct json_raw_string
+json_raw_string AcceptString(input_reader *Reader)
 {
-  const key Length;
-  const char *String;
-};
-
-json_raw_string AcceptString(const char *Input, input_reader *Reader)
-{
-  if (Accept(Input, Reader, '\"'))
+  if (Accept(Reader, '\"'))
   {
   }
   else
@@ -311,29 +328,29 @@ json_raw_string AcceptString(const char *Input, input_reader *Reader)
     return {.Length = 0, .String = 0x0};
   }
 
-  const char *StringStart = Input + Reader->Offset;
+  const char *StringStart = Reader->Input + Reader->Offset;
   key Length = 0;
 
-  while (!Accept(Input, Reader, '\"'))
+  while (!Accept(Reader, '\"'))
   {
-    if (Accept(Input, Reader, '\\'))
+    if (Accept(Reader, '\\'))
     {
       Length++;
 
-      if (Expect(Input, Reader, '\"') || Expect(Input, Reader, '\\') ||
-          Expect(Input, Reader, '/') || Expect(Input, Reader, 'b') || Expect(Input, Reader, 'f') ||
-          Expect(Input, Reader, 'n') || Expect(Input, Reader, 'r') || Expect(Input, Reader, 't'))
+      if (Expect(Reader, '\"') || Expect(Reader, '\\') || Expect(Reader, '/') ||
+          Expect(Reader, 'b') || Expect(Reader, 'f') || Expect(Reader, 'n') ||
+          Expect(Reader, 'r') || Expect(Reader, 't'))
       {
-        Next(Input, Reader);
+        Next(Reader);
         Length++;
       }
-      else if (Accept(Input, Reader, 'u'))
+      else if (Accept(Reader, 'u'))
       {
         Length++;
 
         for (key Index = 0; Index < 4; Index++)
         {
-          if (AcceptHex(Input, Reader))
+          if (AcceptHex(Reader))
           {
             Length++;
           }
@@ -350,11 +367,11 @@ json_raw_string AcceptString(const char *Input, input_reader *Reader)
         return {.Length = 0, .String = 0x0};
       }
     }
-    else if (AnyExcept(Input, Reader, '\"'))
+    else if (AnyExcept(Reader, '\"'))
     {
       Length++;
     }
-    else if (Accept(Input, Reader, '\0'))
+    else if (Accept(Reader, '\0'))
     {
       Reader->Error = INPUT_READER_ERROR_PARSING;
       return {.Length = 0, .String = 0x0};
@@ -364,9 +381,9 @@ json_raw_string AcceptString(const char *Input, input_reader *Reader)
   return {.Length = Length, .String = StringStart};
 }
 
-json_string ParseString(const char *Input, input_reader *Reader)
+json_string ParseString(allocator::bump *Allocator, input_reader *Reader)
 {
-  json_raw_string RawString = AcceptString(Input, Reader);
+  json_raw_string RawString = AcceptString(Reader);
 
   if (Reader->Error != INPUT_READER_ERROR_NONE)
   {
@@ -378,7 +395,7 @@ json_string ParseString(const char *Input, input_reader *Reader)
 
   json_string Result;
   Result.Length = RawString.Length;
-  Result.Buffer = SysAllocate(char, RawString.Length + 1);
+  Result.Buffer = AllocateN(Allocator, char, RawString.Length + 1);
   Result.Buffer[RawString.Length] = '\0';
 
   for (key CharIndex = 0; CharIndex < RawString.Length; CharIndex++)
@@ -389,14 +406,14 @@ json_string ParseString(const char *Input, input_reader *Reader)
   return Result;
 }
 
-json_array ParseArray(const char *Input, input_reader *Reader);
-json_object *ParseObject(const char *Input, input_reader *Reader);
+json_array ParseArray(allocator::bump *Allocator, input_reader *Reader);
+json_object *ParseObject(allocator::bump *Allocator, input_reader *Reader);
 
-json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
+json_value ParseTrimmedValue(allocator::bump *Allocator, input_reader *Reader)
 {
   json_value Value;
 
-  char Match = Input[Reader->Offset];
+  char Match = Reader->Input[Reader->Offset];
 
   switch (Match)
   {
@@ -411,23 +428,23 @@ json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
   case '8':
   case '9':
   case '-':
-    Value.Number = ParseNumber(Input, Reader);
+    Value.Number = ParseNumber(Reader);
     break;
   case 'n':
-    Value.Null = ParseNull(Input, Reader);
+    Value.Null = ParseNull(Reader);
     break;
   case 't':
   case 'f':
-    Value.Boolean = ParseBoolean(Input, Reader);
+    Value.Boolean = ParseBoolean(Reader);
     break;
   case '\"':
-    Value.String = ParseString(Input, Reader);
+    Value.String = ParseString(Allocator, Reader);
     break;
   case '[':
-    Value.Array = ParseArray(Input, Reader);
+    Value.Array = ParseArray(Allocator, Reader);
     break;
   case '{':
-    Value.Object = ParseObject(Input, Reader);
+    Value.Object = ParseObject(Allocator, Reader);
     break;
   default:
     Reader->Error = INPUT_READER_ERROR_PARSING;
@@ -437,18 +454,18 @@ json_value ParseTrimmedValue(const char *Input, input_reader *Reader)
   return Value;
 }
 
-json_value ParseValue(const char *Input, input_reader *Reader)
+json_value ParseValue(allocator::bump *Allocator, input_reader *Reader)
 {
-  AcceptWhitespace(Input, Reader);
-  json_value Value = ParseTrimmedValue(Input, Reader);
-  AcceptWhitespace(Input, Reader);
+  AcceptWhitespace(Reader);
+  json_value Value = ParseTrimmedValue(Allocator, Reader);
+  AcceptWhitespace(Reader);
 
   return Value;
 }
 
-json_array ParseArray(const char *Input, input_reader *Reader)
+json_array ParseArray(allocator::bump *Allocator, input_reader *Reader)
 {
-  if (Accept(Input, Reader, '['))
+  if (Accept(Reader, '['))
   {
   }
   else
@@ -460,22 +477,23 @@ json_array ParseArray(const char *Input, input_reader *Reader)
     };
   }
 
-  AcceptWhitespace(Input, Reader);
+  AcceptWhitespace(Reader);
   bool32 FirstLoop = true;
 
   json_array Result;
   Result.Length = 0;
 
   input_reader Backtrack;
+  Backtrack.Input = Reader->Input;
   Backtrack.Offset = Reader->Offset;
   Backtrack.Error = Reader->Error;
 
-  while (!Accept(Input, &Backtrack, ']'))
+  while (!Accept(&Backtrack, ']'))
   {
     if (FirstLoop)
     {
     }
-    else if (Accept(Input, &Backtrack, ','))
+    else if (Accept(&Backtrack, ','))
     {
     }
     else
@@ -487,23 +505,23 @@ json_array ParseArray(const char *Input, input_reader *Reader)
       };
     }
 
-    ParseValue(Input, &Backtrack);
-    AcceptWhitespace(Input, &Backtrack);
+    ParseValue(Allocator, &Backtrack);
+    AcceptWhitespace(&Backtrack);
 
     Result.Length++;
     FirstLoop = false;
   }
 
-  Result.Values = SysAllocate(json_value, Result.Length);
+  Result.Values = AllocateN(Allocator, json_value, Result.Length);
   key Index = 0;
   FirstLoop = true;
 
-  while (!Accept(Input, Reader, ']'))
+  while (!Accept(Reader, ']'))
   {
     if (FirstLoop)
     {
     }
-    else if (Accept(Input, Reader, ','))
+    else if (Accept(Reader, ','))
     {
     }
     else
@@ -511,8 +529,8 @@ json_array ParseArray(const char *Input, input_reader *Reader)
       Reader->Error = INPUT_READER_ERROR_PARSING;
     }
 
-    Result.Values[Index] = ParseValue(Input, Reader);
-    AcceptWhitespace(Input, Reader);
+    Result.Values[Index] = ParseValue(Allocator, Reader);
+    AcceptWhitespace(Reader);
 
     Index++;
     FirstLoop = false;
@@ -555,9 +573,9 @@ inline json_object_slot *GetSlot(const json_object *JsonObject, const char *Stri
   return GetSlot(JsonObject, Hash);
 }
 
-json_object *ParseObject(const char *Input, input_reader *Reader)
+json_object *ParseObject(allocator::bump *Allocator, input_reader *Reader)
 {
-  if (Accept(Input, Reader, '{'))
+  if (Accept(Reader, '{'))
   {
   }
   else
@@ -567,18 +585,19 @@ json_object *ParseObject(const char *Input, input_reader *Reader)
   }
 
   input_reader Backtrack;
+  Backtrack.Input = Reader->Input;
   Backtrack.Offset = Reader->Offset;
   Backtrack.Error = Reader->Error;
 
   bool32 FirstLoop = true;
   key ObjectCount = 0;
 
-  while (!Accept(Input, &Backtrack, '}'))
+  while (!Accept(&Backtrack, '}'))
   {
     if (FirstLoop)
     {
     }
-    else if (Accept(Input, &Backtrack, ','))
+    else if (Accept(&Backtrack, ','))
     {
     }
     else
@@ -587,12 +606,12 @@ json_object *ParseObject(const char *Input, input_reader *Reader)
       return 0x0;
     }
 
-    AcceptWhitespace(Input, &Backtrack);
-    AcceptString(Input, &Backtrack);
-    AcceptWhitespace(Input, &Backtrack);
+    AcceptWhitespace(&Backtrack);
+    AcceptString(&Backtrack);
+    AcceptWhitespace(&Backtrack);
 
-    Accept(Input, &Backtrack, ':');
-    ParseValue(Input, &Backtrack);
+    Accept(&Backtrack, ':');
+    ParseValue(Allocator, &Backtrack);
     ObjectCount++;
     FirstLoop = false;
   }
@@ -604,17 +623,17 @@ json_object *ParseObject(const char *Input, input_reader *Reader)
   }
 
   FirstLoop = true;
-  json_object *Result = SysAllocate(json_object, 1);
+  json_object *Result = Allocate(Allocator, json_object);
   Result->Count = ObjectCount;
   Result->Capacity = key(f32(ObjectCount) * 1.5f); // Reduce risk of collisions
-  Result->Slots = SysAllocate(json_object_slot, Result->Capacity);
+  Result->Slots = AllocateN(Allocator, json_object_slot, Result->Capacity);
 
-  while (!Accept(Input, Reader, '}'))
+  while (!Accept(Reader, '}'))
   {
     if (FirstLoop)
     {
     }
-    else if (Accept(Input, Reader, ','))
+    else if (Accept(Reader, ','))
     {
     }
     else
@@ -622,13 +641,13 @@ json_object *ParseObject(const char *Input, input_reader *Reader)
       Reader->Error = INPUT_READER_ERROR_PARSING;
     }
 
-    AcceptWhitespace(Input, Reader);
-    json_raw_string RawString = AcceptString(Input, Reader);
-    AcceptWhitespace(Input, Reader);
+    AcceptWhitespace(Reader);
+    json_raw_string RawString = AcceptString(Reader);
+    AcceptWhitespace(Reader);
 
-    Accept(Input, Reader, ':');
+    Accept(Reader, ':');
     json_object_slot *Slot = AssignEmptySlot(Result, &RawString);
-    Slot->Value = ParseValue(Input, Reader);
+    Slot->Value = ParseValue(Allocator, Reader);
 
     if (Reader->Error != INPUT_READER_ERROR_NONE)
     {
@@ -643,104 +662,32 @@ json_object *ParseObject(const char *Input, input_reader *Reader)
 
 i32 main(const i32 Argc, const char *Argv[])
 {
-  input_reader Reader = {.Offset = 0, .Error = 0};
+  input_reader Reader = {
+      .Offset = 0,
+      .Error = 0,
+      .Input = "{ \"First\": [123, 1.45], \"Another\": false, \"A number\" : "
+               "456, \"SubObject\": { \"A property\": \"substring\"}}",
+  };
 
-  bool32 Boolean = ParseValue("\r\t     true", &Reader).Boolean;
-
-  if (Reader.Error == INPUT_READER_ERROR_NONE)
-  {
-    printf("Successfully parsed Boolean: %d (true)\n", Boolean);
-  }
-  else
-  {
-    printf("Failed to parse boolean.\n");
-  }
-
-  Reader = {.Offset = 0, .Error = 0};
-
-  f32 Number = ParseValue("-3.14159e2", &Reader).Number;
-
-  if (Reader.Error == INPUT_READER_ERROR_NONE)
-  {
-    printf("Successfully parsed number: %f\n", Number);
-  }
-  else
-  {
-    printf("Failed to parse number.\n");
-  }
-
-  Reader = {.Offset = 0, .Error = 0};
-
-  Boolean = ParseValue("false", &Reader).Boolean;
-
-  if (Reader.Error == INPUT_READER_ERROR_NONE)
-  {
-    printf("Successfully parsed Boolean: %d (false)\n", Boolean);
-  }
-  else
-  {
-    printf("Failed to parse Boolean.\n");
-  }
-
-  Reader = {.Offset = 0, .Error = 0};
-
-  ParseValue("\rnull", &Reader);
-
-  if (Reader.Error == INPUT_READER_ERROR_NONE)
-  {
-    printf("Successfully parsed Null\n");
-  }
-  else
-  {
-    printf("Failed to parse Null.\n");
-  }
-
-  Reader = {.Offset = 0, .Error = 0};
-
-  json_string String = ParseValue("\"A \\u2346\\bstring\"", &Reader).String;
-
-  if (Reader.Error == INPUT_READER_ERROR_NONE)
-  {
-    printf("Successfully parsed string: %s\n", String.Buffer);
-  }
-  else
-  {
-    printf("Failed to parse string.\n");
-  }
-
-  Reader = {.Offset = 0, .Error = 0};
-
-  json_array Array = ParseValue("[123, [], \"A string\", true, null]", &Reader).Array;
-
-  if (Reader.Error == INPUT_READER_ERROR_NONE)
-  {
-    printf("Successfully parsed array: %f, %s\n", Array.Values[0].Number,
-           Array.Values[2].String.Buffer);
-  }
-  else
-  {
-    printf("Failed to parse array.\n");
-  }
-
-  Reader = {.Offset = 0, .Error = 0};
-
-  json_object *Object = ParseValue("{ \"First\": [123, 1.45], \"Another\": false, \"A number\" : "
-                                   "456, \"SubObject\": { \"A property\": \"substring\"}}",
-                                   &Reader)
-                            .Object;
+  allocator::bump *Allocator = allocator::CreateBump(JSON_ALLOCATION_SIZE);
+  json_object *Object = ParseValue(Allocator, &Reader).Object;
 
   if (Reader.Error == INPUT_READER_ERROR_NONE)
   {
     json_object *SubObject = GetSlot(Object, "SubObject")->Value.Object;
-    f32 ObjectNumber = GetSlot(Object, "A number")->Value.Number;
-    json_string ObjectString = GetSlot(SubObject, "A property")->Value.String;
+    f32 Number = GetSlot(Object, "A number")->Value.Number;
+    json_string SubObjectString = GetSlot(SubObject, "A property")->Value.String;
+    json_array Array = GetSlot(Object, "First")->Value.Array;
 
-    printf("Successfully parsed object: %f, %s\n", ObjectNumber, ObjectString.Buffer);
+    printf("Successfully parsed object: %f, %s, %f\n", Number, SubObjectString.Buffer,
+           Array.Values[0].Number);
   }
   else
   {
     printf("Failed to parse object.\n");
   }
+
+  allocator::Destroy(Allocator);
 
   return 0;
 }
