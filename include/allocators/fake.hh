@@ -10,7 +10,7 @@ struct fake
 };
 
 void *_Allocate(allocator::fake *Allocator, const key Size);
-allocator::fake *CreateFake(const key Size);
+allocator::fake *CreateFake();
 void Reset(allocator::fake *Allocator);
 void Destroy(allocator::fake *Allocator);
 key MemoryUsed(allocator::fake *Allocator);

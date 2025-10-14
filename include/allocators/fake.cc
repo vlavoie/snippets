@@ -6,7 +6,7 @@ void *allocator::_Allocate(allocator::fake *Allocator, const key Size)
   return 0x0;
 }
 
-allocator::fake *CreateFake(const key Size)
+allocator::fake *CreateFake()
 {
   return SysAllocate(allocator::fake, 1);
 }

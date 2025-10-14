@@ -24,15 +24,7 @@ void *allocator::_Allocate(allocator::bump *Allocator, const key Align, const ke
   key_diff Padding = -(key_diff)Allocator->Offset & (Align - 1);
   key_diff Available = Allocator->End - Allocator->Offset - Padding;
 
-  if (Size > Available)
-  {
-    if (Allocator->Next == 0x0)
-    {
-      Allocator->Next = CreateBump(Allocator->End - Allocator->Begin);
-    }
-
-    return allocator::_Allocate(Allocator->Next, Align, Size);
-  }
+  Assert(Available > 0 && Size < Available, "Allocator overflow.");
 
   void *Output = Allocator->Offset + Padding;
   Allocator->Offset += Size + Padding;

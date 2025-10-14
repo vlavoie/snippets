@@ -9,7 +9,6 @@ struct bump
   byte *Begin;
   byte *Offset;
   byte *End;
-  bump *Next;
 };
 
 void *_Allocate(allocator::bump *Allocator, const key Align, const key Size);

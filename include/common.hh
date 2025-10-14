@@ -151,3 +151,18 @@ constexpr inline rgba UnpackRGBA(const color Color)
       .A = UnpackAlpha(Color),
   };
 }
+
+inline void SetFlag(key *Field, const key Flag)
+{
+  *Field |= Flag;
+}
+
+inline bool32 HasFlag(key *Field, const key Flag)
+{
+  return *Field & Flag;
+}
+
+inline void RemoveFlag(key *Field, const key Flag)
+{
+  *Field &= ~Flag;
+}

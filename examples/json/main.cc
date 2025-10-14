@@ -97,7 +97,8 @@ struct json_value_header
 enum input_reader_error
 {
   INPUT_READER_ERROR_NONE = 0,
-  INPUT_READER_ERROR_PARSING = 1,
+  INPUT_READER_ERROR_PARSING = 0b1,
+  INPUT_READER_ERROR_ALLOCATION = 0b10,
 };
 
 inline char Next(input_reader *Reader)
@@ -396,11 +397,19 @@ json_string ParseString(allocator::bump *Allocator, input_reader *Reader)
   json_string Result;
   Result.Length = RawString.Length;
   Result.Buffer = AllocateN(Allocator, char, RawString.Length + 1);
-  Result.Buffer[RawString.Length] = '\0';
 
-  for (key CharIndex = 0; CharIndex < RawString.Length; CharIndex++)
+  if (Result.Buffer)
   {
-    Result.Buffer[CharIndex] = RawString.String[CharIndex];
+    Result.Buffer[RawString.Length] = '\0';
+
+    for (key CharIndex = 0; CharIndex < RawString.Length; CharIndex++)
+    {
+      Result.Buffer[CharIndex] = RawString.String[CharIndex];
+    }
+  }
+  else
+  {
+    SetFlag(&Reader->Error, INPUT_READER_ERROR_ALLOCATION);
   }
 
   return Result;
@@ -498,7 +507,7 @@ json_array ParseArray(allocator::bump *Allocator, input_reader *Reader)
     }
     else
     {
-      Backtrack.Error = INPUT_READER_ERROR_PARSING;
+      SetFlag(&Backtrack.Error, INPUT_READER_ERROR_PARSING);
       return {
           .Length = 0,
           .Values = 0x0,
@@ -526,10 +535,18 @@ json_array ParseArray(allocator::bump *Allocator, input_reader *Reader)
     }
     else
     {
-      Reader->Error = INPUT_READER_ERROR_PARSING;
+      SetFlag(&Reader->Error, INPUT_READER_ERROR_PARSING);
     }
 
-    Result.Values[Index] = ParseValue(Allocator, Reader);
+    if (Result.Values)
+    {
+      Result.Values[Index] = ParseValue(Allocator, Reader);
+    }
+    else
+    {
+      ParseValue(Allocator, Reader);
+      SetFlag(&Reader->Error, INPUT_READER_ERROR_ALLOCATION);
+    }
     AcceptWhitespace(Reader);
 
     Index++;
@@ -580,7 +597,7 @@ json_object *ParseObject(allocator::bump *Allocator, input_reader *Reader)
   }
   else
   {
-    Reader->Error = INPUT_READER_ERROR_PARSING;
+    SetFlag(&Reader->Error, INPUT_READER_ERROR_PARSING);
     return 0x0;
   }
 
@@ -602,7 +619,7 @@ json_object *ParseObject(allocator::bump *Allocator, input_reader *Reader)
     }
     else
     {
-      Reader->Error = INPUT_READER_ERROR_PARSING;
+      SetFlag(&Reader->Error, INPUT_READER_ERROR_PARSING);
       return 0x0;
     }
 
@@ -616,17 +633,24 @@ json_object *ParseObject(allocator::bump *Allocator, input_reader *Reader)
     FirstLoop = false;
   }
 
-  if (Backtrack.Error != INPUT_READER_ERROR_NONE)
+  if (HasFlag(&Backtrack.Error, INPUT_READER_ERROR_PARSING))
   {
-    Reader->Error = INPUT_READER_ERROR_PARSING;
     return 0x0;
   }
 
   FirstLoop = true;
   json_object *Result = Allocate(Allocator, json_object);
-  Result->Count = ObjectCount;
-  Result->Capacity = key(f32(ObjectCount) * 1.5f); // Reduce risk of collisions
-  Result->Slots = AllocateN(Allocator, json_object_slot, Result->Capacity);
+
+  if (Result)
+  {
+    Result->Count = ObjectCount;
+    Result->Capacity = key(f32(ObjectCount) * 1.5f); // Reduce risk of collisions
+    Result->Slots = AllocateN(Allocator, json_object_slot, Result->Capacity);
+  }
+  else
+  {
+    SetFlag(&Reader->Error, INPUT_READER_ERROR_ALLOCATION);
+  }
 
   while (!Accept(Reader, '}'))
   {
@@ -646,8 +670,17 @@ json_object *ParseObject(allocator::bump *Allocator, input_reader *Reader)
     AcceptWhitespace(Reader);
 
     Accept(Reader, ':');
-    json_object_slot *Slot = AssignEmptySlot(Result, &RawString);
-    Slot->Value = ParseValue(Allocator, Reader);
+
+    if (Result && Result->Slots)
+    {
+      json_object_slot *Slot = AssignEmptySlot(Result, &RawString);
+      Slot->Value = ParseValue(Allocator, Reader);
+    }
+    else
+    {
+      SetFlag(&Reader->Error, INPUT_READER_ERROR_ALLOCATION);
+      ParseValue(Allocator, Reader);
+    }
 
     if (Reader->Error != INPUT_READER_ERROR_NONE)
     {
