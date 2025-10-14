@@ -20,11 +20,10 @@ void *allocator::_Allocate(allocator::bump *Allocator, const key Align, const ke
     return 0x0;
   }
 
-  // align padding by power of two
-  key_diff Padding = -(key_diff)Allocator->Offset & (Align - 1);
+  key_diff Padding = GetPadding(Allocator->Offset, Align);
   key_diff Available = Allocator->End - Allocator->Offset - Padding;
 
-  Assert(Available > 0 && Size < Available, "Allocator overflow.");
+  Assert(Available > 0 && Size <= Available, "Allocator overflow.");
 
   void *Output = Allocator->Offset + Padding;
   Allocator->Offset += Size + Padding;

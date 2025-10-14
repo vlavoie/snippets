@@ -34,10 +34,6 @@ along with this program.  If not, see <https://www.gnu.org/licenses/>.
 #define MEGABYTE (KILOBYTE * 1024)
 #define GIGABYTE (MEGABYTE * 1024)
 
-#define Allocate(_Block, _Type) (_Type *)allocator::_Allocate(_Block, alignof(_Type), sizeof(_Type))
-#define AllocateN(_Block, _Type, _Length)                                                          \
-  (_Type *)allocator::_Allocate(_Block, alignof(_Type), sizeof(_Type) * _Length)
-
 typedef int8_t i8;
 typedef int16_t i16;
 typedef int32_t i32;
@@ -157,9 +153,9 @@ inline void SetFlag(key *Field, const key Flag)
   *Field |= Flag;
 }
 
-inline bool32 HasFlag(key *Field, const key Flag)
+inline bool32 HasFlag(const key Field, const key Flag)
 {
-  return *Field & Flag;
+  return Field & Flag;
 }
 
 inline void RemoveFlag(key *Field, const key Flag)

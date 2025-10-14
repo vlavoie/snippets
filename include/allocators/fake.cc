@@ -1,27 +1,32 @@
 #include "fake.hh"
 
-void *allocator::_Allocate(allocator::fake *Allocator, const key Size)
+void *allocator::_Allocate(allocator::fake *Allocator, const key Align, const key Size)
 {
-  Allocator->Allocated += Size;
+  key_diff Padding = GetPadding(Allocator->Offset, Align);
+  Allocator->Offset += Size + Padding;
   return 0x0;
 }
 
-allocator::fake *CreateFake()
+allocator::fake *allocator::CreateFake()
 {
-  return SysAllocate(allocator::fake, 1);
+  allocator::fake *Allocator = SysAllocate(allocator::fake, 1);
+  Allocator->Begin = (byte *)Allocator;
+  Allocator->Offset = Allocator->Begin;
+
+  return Allocator;
 }
 
-void allocatorReset(allocator::fake *Allocator)
+void allocator::Reset(allocator::fake *Allocator)
 {
-  Allocator->Allocated = 0;
+  Allocator->Offset = Allocator->Begin;
 }
 
-void allocatorDestroy(allocator::fake *Allocator)
+void allocator::Destroy(allocator::fake *Allocator)
 {
   SysFree(Allocator);
 }
 
-key allocatorMemoryUsed(allocator::fake *Allocator)
+key allocator::MemoryUsed(allocator::fake *Allocator)
 {
-  return Allocator->Allocated;
+  return Allocator->Offset - Allocator->Begin;
 }

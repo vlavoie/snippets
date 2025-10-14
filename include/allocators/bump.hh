@@ -1,5 +1,6 @@
 #pragma once
 
+#include "allocator.hh"
 #include "../common.hh"
 
 namespace allocator

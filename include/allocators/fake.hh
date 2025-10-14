@@ -1,15 +1,17 @@
 #pragma once
 
+#include "allocator.hh"
 #include "../common.hh"
 
 namespace allocator
 {
 struct fake
 {
-  key Allocated;
+  byte *Begin;
+  byte *Offset;
 };
 
-void *_Allocate(allocator::fake *Allocator, const key Size);
+void *_Allocate(allocator::fake *Allocator, const key Align, const key Size);
 allocator::fake *CreateFake();
 void Reset(allocator::fake *Allocator);
 void Destroy(allocator::fake *Allocator);
