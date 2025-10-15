@@ -88,7 +88,9 @@
       "type": "cppdbg",
       "request": "launch",
       "program": "${workspaceFolder}/build/json_d",
-      "args": [],
+      "args": [
+        "assets/test2.json"
+      ],
       "stopAtEntry": false,
       "cwd": "${workspaceFolder}",
       "environment": [],

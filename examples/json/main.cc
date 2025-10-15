@@ -16,11 +16,12 @@ You should have received a copy of the GNU General Public License
 along with this program.  If not, see <https://www.gnu.org/licenses/>.
 */
 
+#include <allocators/bump.hh>
+#include <allocators/fake.hh>
+#include <buffer.hh>
 #include <common.hh>
 #include <hash.hh>
 #include <math2d.hh>
-#include <allocators/bump.hh>
-#include <allocators/fake.hh>
 
 #include <cstdio>
 
@@ -833,9 +834,9 @@ json_object *JsonGetObject(const json_array *Array, const key Index)
   return Header->Value.Object;
 }
 
-template <typename A> json_object *JsonParse(A *Allocator, input_reader *Reader)
+template <typename A> json_value_header JsonParse(A *Allocator, input_reader *Reader)
 {
-  return ParseObject(Allocator, Reader);
+  return ParseValue(Allocator, Reader);
 }
 
 i32 main(const i32 Argc, const char *Argv[])
@@ -846,6 +847,19 @@ i32 main(const i32 Argc, const char *Argv[])
       .Input = "{ \"First\": [123, 1.45], \"Another\": false, \"A number\" : "
                "456, \"SubObject\": { \"A property\": \"substring\"}}",
   };
+
+  if (Argc > 1)
+  {
+    buffer JsonBuffer = LoadBufferFromFile(Argv[1]);
+
+    if (!IsInitialized(JsonBuffer))
+    {
+      printf("Failed to load JSON file.");
+      return 1;
+    }
+
+    Reader.Input = (const char *)JsonBuffer.Data;
+  }
 
   allocator::fake *FakeAllocator = allocator::CreateFake();
 
@@ -863,18 +877,16 @@ i32 main(const i32 Argc, const char *Argv[])
   Reader.Offset = 0;
   Reader.Error = 0;
   allocator::bump *Allocator = allocator::CreateBump(AllocationSize);
-  json_object *Object = JsonParse(Allocator, &Reader);
+  json_value_header Root = JsonParse(Allocator, &Reader);
 
   if (Reader.Error == INPUT_READER_ERROR_NONE)
   {
-    json_object *SubObject = JsonGetObject(Object, "SubObject");
-    f32 Number = JsonGetNumber(Object, "A number");
-    json_string *SubObjectString = JsonGetString(SubObject, "A property");
-    json_array *Array = JsonGetArray(Object, "First");
-    f32 ArrayNumber = JsonGetNumber(Array, 0);
-
-    printf("Successfully parsed object: %f, %s, %f\n", Number, SubObjectString->Buffer,
-           ArrayNumber);
+    json_object *FourthEntry = JsonGetObject(Root.Value.Array, 3);
+    printf("Fourth entry name is: %s, language: %s, id: %s, bio: %s, version: %f\n",
+           JsonGetString(FourthEntry, "name")->Buffer,
+           JsonGetString(FourthEntry, "language")->Buffer, JsonGetString(FourthEntry, "id")->Buffer,
+           JsonGetString(FourthEntry, "bio")->Buffer, JsonGetNumber(FourthEntry, "version"));
+    printf("Entry count for array is: %lu\n", Root.Value.Array->Length);
   }
   else
   {
