@@ -841,12 +841,9 @@ template <typename A> json_value_header JsonParse(A *Allocator, input_reader *Re
 
 i32 main(const i32 Argc, const char *Argv[])
 {
-  input_reader Reader = {
-      .Offset = 0,
-      .Error = 0,
-      .Input = "{ \"First\": [123, 1.45], \"Another\": false, \"A number\" : "
-               "456, \"SubObject\": { \"A property\": \"substring\"}}",
-  };
+  input_reader Reader;
+  Reader.Offset = 0;
+  Reader.Error = 0;
 
   if (Argc > 1)
   {
@@ -854,11 +851,16 @@ i32 main(const i32 Argc, const char *Argv[])
 
     if (!IsInitialized(JsonBuffer))
     {
-      printf("Failed to load JSON file.");
+      printf("Failed to load JSON file.\n");
       return 1;
     }
 
     Reader.Input = (const char *)JsonBuffer.Data;
+  }
+  else
+  {
+    printf("Missing JSON file argument.\n");
+    return 1;
   }
 
   allocator::fake *FakeAllocator = allocator::CreateFake();
